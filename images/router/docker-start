@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+chown -R frr:frr /etc/frr
+/etc/init.d/frr start
+
+# Sleep forever
+exec tail -f /dev/null
