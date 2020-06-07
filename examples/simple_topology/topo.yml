@@ -1,0 +1,26 @@
+autonomous_systems:
+  - asn: 10
+    routers: 4
+    igp: OSPF
+    prefix: '192.168.8.0/28'
+    links:
+      kind: 'full-mesh'
+  - asn: 20
+    routers: 3
+    igp: OSPF
+    prefix: '10.1.1.0/29'
+    links:
+      kind: 'manual'
+      specs:
+        - from: 1
+          to: 2
+        - from: 2
+          to: 3
+        - from: 1
+          to: 4
+  - asn: 33
+    routers: 5
+    igp: 'OSPF'
+    prefix: '172.16.88.0/24'
+    links:
+      kind: 'ring'
