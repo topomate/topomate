@@ -1,0 +1,64 @@
+version: '3.5'
+
+services:
+  as1_r1:
+    # build: ../../images/router
+    image: basic_frr
+    container_name: as1-r1
+    networks:
+      - as1_net
+      - peering_r1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+  
+  as1_r2:
+    # build: ../../images/router
+    image: basic_frr
+    container_name: as1-r2
+    networks:
+      - as1_net
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  as2_r1:
+    # build: ../../images/router
+    image: basic_frr
+    container_name: as2-r1
+    networks:
+      - as2_net
+      - peering_r1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  as2_r2:
+    # build: ../../images/router
+    image: basic_frr
+    container_name: as2-r2
+    networks:
+      - as2_net
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+
+networks:
+  as1_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "192.168.10.0/24"
+  as2_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "192.168.20.0/24"
+  peering_r1:
+    ipam:
+      driver: default
+      config:
+        - subnet: "192.168.100.0/29"
+
+  
