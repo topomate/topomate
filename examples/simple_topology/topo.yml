@@ -1,3 +1,4 @@
+name: "Simple configuration"
 autonomous_systems:
   - asn: 10
     routers: 4

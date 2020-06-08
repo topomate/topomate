@@ -28,7 +28,8 @@ type AutonomousSystem struct {
 	Links      LinkModule `yaml:"links"`
 }
 type BaseConfig struct {
-	As []*AutonomousSystem `yaml:"autonomous_systems"`
+	Name string              `yaml:"name"`
+	As   []*AutonomousSystem `yaml:"autonomous_systems"`
 }
 
 func ReadConfig(path string) *BaseConfig {
@@ -55,7 +56,8 @@ func ReadConfig(path string) *BaseConfig {
 
 func (c *BaseConfig) Print() {
 	for _, v := range c.As {
-		pp.Print(*v)
+		v.SetupLinks()
+		pp.Println(*v)
 	}
 }
 
@@ -100,7 +102,9 @@ func (r *Router) StartContainer(wg *sync.WaitGroup) {
 	if len(li) == 0 { // container does not exist yet
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image: "topomate-router",
-		}, nil, nil, nil, r.ContainerName)
+		}, &container.HostConfig{
+			CapAdd: []string{"SYS_ADMIN", "NET_ADMIN"},
+		}, nil, nil, r.ContainerName)
 		utils.Check(err)
 		containerID = resp.ID
 	} else { // container exists

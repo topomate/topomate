@@ -43,8 +43,8 @@ to quickly create a Cobra application.`,
 		fmt.Println("validate called")
 		newConf := config.ReadConfig(args[0])
 		newConf.Print()
-		newConf.StopAll()
 	},
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
