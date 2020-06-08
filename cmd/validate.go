@@ -43,6 +43,7 @@ to quickly create a Cobra application.`,
 		fmt.Println("validate called")
 		newConf := config.ReadConfig(args[0])
 		newConf.Print()
+		newConf.StopAll()
 	},
 }
 

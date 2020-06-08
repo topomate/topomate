@@ -26,8 +26,8 @@ type LinkModuleManual struct {
 }
 
 type LinkModule struct {
-	Kind  string          `yaml:"kind"`
-	Specs LinkModuleSpecs `yaml:"specs"`
+	Kind  string              `yaml:"kind"`
+	Specs []map[string]string `yaml:"specs"`
 }
 
 func (i *LinkModule) ApplyConfig() {
