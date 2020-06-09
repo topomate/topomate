@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/containerd/containerd v1.3.4 // indirect
+	github.com/digitalocean/go-openvswitch v0.0.0-20191122155805-8ce3b4218729
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200605165554-5ffd6778244c+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -16,5 +17,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
+	github.com/vishvananda/netlink v1.1.0
 	gopkg.in/yaml.v2 v2.3.0
 )

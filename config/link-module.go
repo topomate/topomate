@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rahveiz/topomate/link"
+
 	"github.com/rahveiz/topomate/utils"
 )
 
@@ -84,5 +86,20 @@ func (lm *LinkModule) SetupFullMesh(nbRouters int) {
 			}
 			counter++
 		}
+	}
+}
+
+func (a *AutonomousSystem) ApplyLinks() {
+	for _, v := range a.Links.Links {
+		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.From, v.To)
+		link.CreateBridge(brName)
+		link.AddPortToContainer(brName, "eth"+v.To, a.getContainerName(v.From))
+	}
+}
+
+func (a *AutonomousSystem) RemoveLinks() {
+	for _, v := range a.Links.Links {
+		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.From, v.To)
+		link.DeleteBridge(brName)
 	}
 }

@@ -3,7 +3,7 @@ version: '3.5'
 services:
   as1_r1:
     # build: ../../images/router
-    image: basic_frr
+    image: topomate-router
     container_name: as1-r1
     networks:
       - as1_net
@@ -14,7 +14,7 @@ services:
   
   as1_r2:
     # build: ../../images/router
-    image: basic_frr
+    image: topomate-router
     container_name: as1-r2
     networks:
       - as1_net
@@ -24,7 +24,7 @@ services:
 
   as2_r1:
     # build: ../../images/router
-    image: basic_frr
+    image: topomate-router
     container_name: as2-r1
     networks:
       - as2_net
@@ -35,7 +35,7 @@ services:
 
   as2_r2:
     # build: ../../images/router
-    image: basic_frr
+    image: topomate-router
     container_name: as2-r2
     networks:
       - as2_net
