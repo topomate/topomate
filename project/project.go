@@ -111,7 +111,7 @@ func List() {
 			log.Fatalln(err)
 		}
 		fmt.Printf("(%s)\t%s - %d AS\n",
-			filename[:len(filename)-5], c.Name, len(c.As))
+			filename[:len(filename)-5], c.Name, len(c.AS))
 	}
 }
 

@@ -1,11 +1,10 @@
 package link
 
 import (
-	"fmt"
 	"log"
-	"os/exec"
 
 	"github.com/digitalocean/go-openvswitch/ovs"
+	"github.com/rahveiz/topomate/utils"
 )
 
 func CreateBridge(name string) {
@@ -48,8 +47,7 @@ func DeleteBridge(name string) {
 // AddPortToContainer links a container to an OVS bridge using
 // the ovs-docker script
 func AddPortToContainer(brName, ifName, containerName string) {
-	out, err := exec.Command(
-		"sudo",
+	_, err := utils.ExecSudo(
 		"ovs-docker",
 		"add-port",
 		brName,
@@ -57,8 +55,33 @@ func AddPortToContainer(brName, ifName, containerName string) {
 		containerName,
 	).CombinedOutput()
 	if err != nil {
-		log.Fatalf("error using ovs-docker")
+		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
-	fmt.Println(string(out))
-	fmt.Println("foobar")
+}
+
+// DelPortFromContainer removes an OVS port from a container
+func DelPortFromContainer(brName, ifName, containerName string) {
+	_, err := utils.ExecSudo(
+		"ovs-docker",
+		"del-port",
+		brName,
+		ifName,
+		containerName,
+	).CombinedOutput()
+	if err != nil {
+		log.Fatalf("error using ovs-docker: %s\n", err)
+	}
+}
+
+// ClearPortsFromContainer removes all OVS ports from a container
+func ClearPortsFromContainer(brName, containerName string) {
+	_, err := utils.ExecSudo(
+		"ovs-docker",
+		"del-ports",
+		brName,
+		containerName,
+	).CombinedOutput()
+	if err != nil {
+		log.Fatalf("error using ovs-docker: %s\n", err)
+	}
 }
