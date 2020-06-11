@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"io/ioutil"
+	"log"
 	"strconv"
 	"sync"
 
@@ -40,7 +41,9 @@ func (a *AutonomousSystem) getContainerName(n string) string {
 func ReadConfig(path string) *BaseConfig {
 	conf := &BaseConfig{}
 	data, err := ioutil.ReadFile(path)
-	utils.Check(err)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	err = yaml.Unmarshal(data, conf)
 	utils.Check(err)
 

@@ -188,3 +188,4 @@ dmypy.json
 # End of https://www.toptal.com/developers/gitignore/api/go
 
 topomate
+cmd/test.go

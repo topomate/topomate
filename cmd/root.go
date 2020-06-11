@@ -23,8 +23,11 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/project"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -95,4 +98,40 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func getTarget(cmd *cobra.Command, args []string) string {
+	var target string
+	if cmd.Flags().Changed("project") {
+		var err error
+		target, err = cmd.Flags().GetString("project")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return target
+	}
+
+	if len(args) == 0 {
+		log.Fatalln("File or project not specified")
+	}
+
+	return args[0]
+}
+
+func getConfig(cmd *cobra.Command, args []string) *config.BaseConfig {
+	var target string
+	if cmd.Flags().Changed("project") {
+		var err error
+		target, err = cmd.Flags().GetString("project")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return project.Get(target)
+	}
+
+	if len(args) == 0 {
+		log.Fatalln("File or project not specified")
+	}
+
+	return config.ReadConfig(target)
 }

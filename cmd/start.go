@@ -16,9 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/rahveiz/topomate/config"
 	"github.com/spf13/cobra"
 )
 
@@ -33,15 +30,14 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
-		newConf := config.ReadConfig(args[0])
+		newConf := getConfig(cmd, args)
 		newConf.StartAll()
 	},
-	Args: cobra.ExactArgs(1),
 }
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+	startCmd.Flags().StringP("project", "p", "", "Project name")
 
 	// Here you will define your flags and configuration settings.
 

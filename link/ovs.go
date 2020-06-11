@@ -3,16 +3,14 @@ package link
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 
 	"github.com/digitalocean/go-openvswitch/ovs"
-	"github.com/vishvananda/netlink"
 )
 
 func CreateBridge(name string) {
 
-	c := ovs.New()
+	c := ovs.New(ovs.Sudo())
 
 	if err := c.VSwitch.AddBridge(name); err != nil {
 		log.Fatalf("failed to add bridge: %v", err)
@@ -20,30 +18,24 @@ func CreateBridge(name string) {
 
 }
 
-func CreateBridgeWithIp(name, prefix string) {
+// func CreateBridgeWithIp(name, prefix string) {
+// 	CreateBridge(name)
 
-	// Command must be run as root
-	if os.Geteuid() != 0 {
-		log.Fatalf("must have root privileges")
-	}
+// 	br, err := netlink.LinkByName(name)
+// 	if err != nil {
+// 		log.Fatalf("failed to add address to %s: %v", name, err)
+// 	}
 
-	CreateBridge(name)
+// 	addr, err := netlink.ParseAddr(prefix)
+// 	if err != nil {
+// 		log.Fatalf("failed to parse addr %s: %v", prefix, err)
+// 	}
 
-	br, err := netlink.LinkByName(name)
-	if err != nil {
-		log.Fatalf("failed to add address to %s: %v", name, err)
-	}
+// 	if err := netlink.AddrAdd(br, addr); err != nil {
+// 		log.Fatalf("failed to add addr: %v", err)
+// 	}
 
-	addr, err := netlink.ParseAddr(prefix)
-	if err != nil {
-		log.Fatalf("failed to parse addr %s: %v", prefix, err)
-	}
-
-	if err := netlink.AddrAdd(br, addr); err != nil {
-		log.Fatalf("failed to add addr: %v", err)
-	}
-
-}
+// }
 
 func DeleteBridge(name string) {
 	c := ovs.New(ovs.Sudo())
@@ -57,6 +49,7 @@ func DeleteBridge(name string) {
 // the ovs-docker script
 func AddPortToContainer(brName, ifName, containerName string) {
 	out, err := exec.Command(
+		"sudo",
 		"ovs-docker",
 		"add-port",
 		brName,

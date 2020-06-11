@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
@@ -35,16 +36,22 @@ var projectCmd = &cobra.Command{
 var createCmd = &cobra.Command{
 	Use: "create",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("create project called")
-		newConf := config.ReadConfig(args[0])
-		project.Save(newConf)
+		target, err := cmd.Flags().GetString("file")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		newConf := config.ReadConfig(target)
+		project.Save(args[0], newConf)
+		fmt.Printf("Project %s created\n", target)
 	},
+	Args: cobra.ExactArgs(1),
 }
 
 var loadCmd = &cobra.Command{
 	Use: "load",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("load project called")
+		project.Get(args[0]).Print()
 	},
 }
 
@@ -58,15 +65,28 @@ var listCmd = &cobra.Command{
 var deleteCmd = &cobra.Command{
 	Use: "delete",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("delete project called")
+		target, err := cmd.Flags().GetString("project")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		project.Delete(target)
+		fmt.Printf("Project %s deleted\n", target)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(projectCmd)
+
 	projectCmd.AddCommand(createCmd)
+	createCmd.Flags().StringP("file", "f", "", "Target topology file")
+	createCmd.MarkFlagRequired("file")
+
 	projectCmd.AddCommand(loadCmd)
+
 	projectCmd.AddCommand(deleteCmd)
+	deleteCmd.Flags().StringP("project", "p", "", "Project name")
+	deleteCmd.MarkFlagRequired("project")
+
 	projectCmd.AddCommand(listCmd)
 
 	// Here you will define your flags and configuration settings.

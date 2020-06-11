@@ -59,16 +59,18 @@ func getProjectDirectory() string {
 	return defaultDir
 }
 
-func saveToDisk(v interface{}) error {
+func getProjectFile(name string) string {
+	d := getProjectDirectory()
+	filename := fmt.Sprintf("%s/%s.json", d, name)
+	return filename
+}
+
+func saveToDisk(name string, v interface{}) error {
+	filename := getProjectFile(name)
 	lock.Lock()
 	defer lock.Unlock()
-	projectPath := fmt.Sprintf(
-		"%s/%s.json",
-		getProjectDirectory(),
-		uuid.Generate().String(),
-	)
 
-	f, err := os.Create(projectPath)
+	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
@@ -86,8 +88,8 @@ func saveToDisk(v interface{}) error {
 	return nil
 }
 
-func Save(v interface{}) {
-	if err := saveToDisk(v); err != nil {
+func Save(name string, v interface{}) {
+	if err := saveToDisk(name, v); err != nil {
 		log.Fatalln(err)
 	}
 }
@@ -98,15 +100,37 @@ func List() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for i, f := range files {
+	for _, f := range files {
 		c := config.BaseConfig{}
-		b, err := ioutil.ReadFile(d + "/" + f.Name())
+		filename := f.Name()
+		b, err := ioutil.ReadFile(d + "/" + filename)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		if err := json.Unmarshal(b, &c); err != nil {
 			log.Fatalln(err)
 		}
-		fmt.Printf("(%d)\t%s - %d AS\n", i, c.Name, len(c.As))
+		fmt.Printf("(%s)\t%s - %d AS\n",
+			filename[:len(filename)-5], c.Name, len(c.As))
+	}
+}
+
+func Get(name string) *config.BaseConfig {
+	c := &config.BaseConfig{}
+	b, err := ioutil.ReadFile(getProjectFile(name))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if err := json.Unmarshal(b, c); err != nil {
+		log.Fatalln(err)
+	}
+
+	return c
+}
+
+func Delete(name string) {
+	if err := os.Remove(getProjectFile(name)); err != nil {
+		log.Fatalln(err)
 	}
 }
