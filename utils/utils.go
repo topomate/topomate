@@ -12,8 +12,18 @@ func Check(e error) {
 	}
 }
 
-func PrintError(msg string, a ...interface{}) {
-	fmt.Fprintln(os.Stderr, msg, a)
+func PrintError(args ...interface{}) (n int, err error) {
+	return fmt.Fprintln(os.Stderr, args...)
+}
+
+func Fatalln(args ...interface{}) {
+	fmt.Fprintln(os.Stderr, args...)
+	os.Exit(1)
+}
+
+func Fatalf(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+	os.Exit(1)
 }
 
 // ExecSudo is equivalent to exec.Command with sudo prefixed
