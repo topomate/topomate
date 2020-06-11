@@ -47,14 +47,6 @@ var createCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 }
 
-var loadCmd = &cobra.Command{
-	Use: "load",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("load project called")
-		project.Get(args[0]).Print()
-	},
-}
-
 var listCmd = &cobra.Command{
 	Use: "list",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -80,8 +72,6 @@ func init() {
 	projectCmd.AddCommand(createCmd)
 	createCmd.Flags().StringP("file", "f", "", "Target topology file")
 	createCmd.MarkFlagRequired("file")
-
-	projectCmd.AddCommand(loadCmd)
 
 	projectCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().StringP("project", "p", "", "Project name")
