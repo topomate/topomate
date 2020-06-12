@@ -13,12 +13,12 @@ autonomous_systems:
     links:
       kind: 'manual'
       specs:
-        - from: 1
-          to: 2
-        - from: 2
-          to: 3
-        - from: 1
-          to: 4
+        - first: 1
+          second: 2
+        - first: 2
+          second: 3
+        - first: 1
+          second: 4
   - asn: 33
     routers: 5
     igp: 'OSPF'

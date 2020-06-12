@@ -118,11 +118,10 @@ func getTarget(cmd *cobra.Command, args []string) string {
 	return args[0]
 }
 
-func getConfig(cmd *cobra.Command, args []string) *config.BaseConfig {
-	var target string
+func getConfig(cmd *cobra.Command, args []string) *config.Project {
 	if cmd.Flags().Changed("project") {
 		var err error
-		target, err = cmd.Flags().GetString("project")
+		target, err := cmd.Flags().GetString("project")
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -133,5 +132,5 @@ func getConfig(cmd *cobra.Command, args []string) *config.BaseConfig {
 		log.Fatalln("File or project not specified")
 	}
 
-	return config.ReadConfig(target)
+	return config.ReadConfig(args[0])
 }

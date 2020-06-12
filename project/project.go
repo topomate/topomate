@@ -101,7 +101,7 @@ func List() {
 		log.Fatalln(err)
 	}
 	for _, f := range files {
-		c := config.BaseConfig{}
+		c := config.Project{}
 		filename := f.Name()
 		b, err := ioutil.ReadFile(d + "/" + filename)
 		if err != nil {
@@ -115,8 +115,8 @@ func List() {
 	}
 }
 
-func Get(name string) *config.BaseConfig {
-	c := &config.BaseConfig{}
+func Get(name string) *config.Project {
+	c := &config.Project{}
 	b, err := ioutil.ReadFile(getProjectFile(name))
 	if err != nil {
 		log.Fatalln(err)
