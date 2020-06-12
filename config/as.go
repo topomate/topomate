@@ -8,6 +8,7 @@ import (
 	"github.com/rahveiz/topomate/link"
 )
 
+// AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
 	ASN     int
 	IGP     string
@@ -20,6 +21,7 @@ func (a *AutonomousSystem) getContainerName(n string) string {
 	return "AS" + strconv.Itoa(a.ASN) + "-R" + n
 }
 
+// SetupLinks generates the L2 configuration based on provided config
 func (a *AutonomousSystem) SetupLinks(cfg LinkModule) {
 	switch kind := strings.ToLower(cfg.Kind); kind {
 	case "manual":
@@ -33,6 +35,7 @@ func (a *AutonomousSystem) SetupLinks(cfg LinkModule) {
 	}
 }
 
+// ApplyLinks applies the L2 configuration using OVS
 func (a *AutonomousSystem) ApplyLinks() {
 	for _, v := range a.Links {
 		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.First, v.Second)
@@ -42,6 +45,7 @@ func (a *AutonomousSystem) ApplyLinks() {
 	}
 }
 
+// RemoveLinks removes the L2 configuration of an AS
 func (a *AutonomousSystem) RemoveLinks() {
 	for _, v := range a.Links {
 		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.First, v.Second)

@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"math"
 	"net"
 )
@@ -30,18 +29,16 @@ func (n *Net) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-func (n *Net) getIPHosts() []net.IP {
-	m, _ := n.IPNet.Mask.Size()
-	nbHosts := int(math.Pow(2, 32-float64(m)))
+// AllIPs returns a slice containing all IPs in a network
+// (identifier and broadcast included)
+func (n Net) AllIPs() []net.IP {
+	nbHosts := n.Size()
 	hosts := make([]net.IP, nbHosts)
 	mask := binary.BigEndian.Uint32(n.IPNet.Mask)
 	start := binary.BigEndian.Uint32(n.IPNet.IP)
 
-	fmt.Println(nbHosts, "hosts")
-
 	// find the final address
 	finish := (start & mask) | (mask ^ 0xffffffff)
-	fmt.Println(finish)
 
 	// loop through addresses as uint32
 	cnt := 0
@@ -54,4 +51,15 @@ func (n *Net) getIPHosts() []net.IP {
 		cnt++
 	}
 	return hosts
+}
+
+// Size returns the size of a network (number of addresses)
+func (n Net) Size() int {
+	m, _ := n.IPNet.Mask.Size()
+	return int(math.Pow(2, 32-float64(m)))
+}
+
+// Hosts returns a slice of hosts in a network
+func (n Net) Hosts() []net.IP {
+	return n.AllIPs()[1 : n.Size()-1]
 }
