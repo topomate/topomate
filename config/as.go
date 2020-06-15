@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apparentlymart/go-cidr/cidr"
+
 	"github.com/rahveiz/topomate/link"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -61,5 +63,36 @@ func (a *AutonomousSystem) ApplyLinks() {
 func (a *AutonomousSystem) RemoveLinks() {
 	for _, v := range a.Links {
 		link.DeleteBridge(v.BrName(a.ASN))
+	}
+}
+
+func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
+	if prefixLen == 0 { // do not set subnets
+		return
+	}
+	m, _ := a.Network.IPNet.Mask.Size()
+	if prefixLen <= m {
+		utils.Fatalf("AS%d subnets reservation error: prefixlen too large", a.ASN)
+	}
+
+	n, _ := cidr.Subnet(a.Network.IPNet, prefixLen-m, 0)
+	addrCnt := cidr.AddressCount(n) - 2 // number of hosts available
+	assigned := uint64(0)
+	ip := n.IP
+
+	for _, v := range a.Links {
+		ip = cidr.Inc(ip)
+		v.First.IP = ip
+		ip = cidr.Inc(ip)
+		v.Second.IP = ip
+		assigned += 2
+
+		// check if we need to get next subnet
+		if assigned+2 > addrCnt {
+			n, _ = cidr.NextSubnet(n, prefixLen)
+			assigned = 0
+			ip = n.IP
+		}
+
 	}
 }

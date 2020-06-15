@@ -8,6 +8,10 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+const (
+	defaultSubnetLength4 = 30
+)
+
 type NetLink struct {
 	RouterIndex int
 	IP          net.IP
@@ -15,13 +19,15 @@ type NetLink struct {
 }
 
 type Link struct {
-	First  NetLink
-	Second NetLink
+	First        *NetLink
+	Second       *NetLink
+	SubnetLength int
 }
 
 type LinkModule struct {
-	Kind  string              `yaml:"kind"`
-	Specs []map[string]string `yaml:"specs"`
+	Kind         string              `yaml:"kind"`
+	SubnetLength int                 `yaml:"subnet_length"`
+	Specs        []map[string]string `yaml:"specs"`
 }
 
 // IfNames returns the name of both interfaces of a link
@@ -40,7 +46,7 @@ func (l Link) BrName(asn int) string {
 	)
 }
 
-func NewNetLink(index interface{}) NetLink {
+func NewNetLink(index interface{}) *NetLink {
 	var idx int
 	var err error
 	switch index.(type) {
@@ -57,17 +63,19 @@ func NewNetLink(index interface{}) NetLink {
 		utils.Fatalln("NewNetLink: index type mismtach")
 	}
 
-	return NetLink{
+	return &NetLink{
 		RouterIndex: idx,
 		IP:          net.IP{},
 		Speed:       10000,
 	}
 }
 
-func (lm *LinkModule) SetupManual() []Link {
+func (lm LinkModule) SetupManual() []Link {
 	links := make([]Link, len(lm.Specs))
 	for idx, v := range lm.Specs {
-		l := Link{}
+		l := Link{
+			SubnetLength: lm.SubnetLength,
+		}
 		if first, ok := v["first"]; ok {
 			l.First = NewNetLink(first)
 		} else {
@@ -83,22 +91,23 @@ func (lm *LinkModule) SetupManual() []Link {
 	return links
 }
 
-func (lm *LinkModule) SetupRing(nbRouters int) []Link {
+func (lm LinkModule) SetupRing(nbRouters int) []Link {
 	if nbRouters < 3 {
 		utils.Fatalln("Cannot create ring topology with less than 3 routers.")
 	}
 	links := make([]Link, nbRouters)
 	for i := 1; i <= nbRouters; i++ {
 		links[i-1] = Link{
-			First:  NewNetLink(i),
-			Second: NewNetLink((i % nbRouters) + 1),
+			SubnetLength: lm.SubnetLength,
+			First:        NewNetLink(i),
+			Second:       NewNetLink((i % nbRouters) + 1),
 		}
 
 	}
 	return links
 }
 
-func (lm *LinkModule) SetupFullMesh(nbRouters int) []Link {
+func (lm LinkModule) SetupFullMesh(nbRouters int) []Link {
 	if nbRouters < 2 {
 		return nil
 	}
@@ -107,8 +116,9 @@ func (lm *LinkModule) SetupFullMesh(nbRouters int) []Link {
 	for i := 1; i <= nbRouters; i++ {
 		for j := i + 1; j <= nbRouters; j++ {
 			links[counter] = Link{
-				First:  NewNetLink(i),
-				Second: NewNetLink(j),
+				SubnetLength: lm.SubnetLength,
+				First:        NewNetLink(i),
+				Second:       NewNetLink(j),
 			}
 			counter++
 		}

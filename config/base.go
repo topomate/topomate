@@ -73,16 +73,21 @@ func ReadConfig(path string) *Project {
 			utils.Fatalln(err)
 		}
 		a.Network = Net{
-			IPNet: n,
+			IPNet:    n,
+			Assigned: make(map[string]bool, k.NumRouters*2),
 		}
+
+		a.ReserveSubnets(k.LinksConfig.SubnetLength)
 	}
 	return proj
 }
 
 func (p *Project) Print() {
 	for _, v := range p.AS {
-		// v.SetupLinks()
 		pp.Println(*v)
+		// for _, e := range v.Links {
+		// 	fmt.Println(e.First, e.Second)
+		// }
 	}
 }
 

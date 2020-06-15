@@ -5,6 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.46.3
 	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/apparentlymart/go-cidr v1.0.1
 	github.com/containerd/containerd v1.3.4 // indirect
 	github.com/digitalocean/go-openvswitch v0.0.0-20191122155805-8ce3b4218729
 	github.com/docker/distribution v2.7.1+incompatible

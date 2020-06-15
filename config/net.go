@@ -8,7 +8,8 @@ import (
 )
 
 type Net struct {
-	IPNet *net.IPNet
+	IPNet    *net.IPNet
+	Assigned map[string]bool
 }
 
 func (n Net) MarshalJSON() ([]byte, error) {

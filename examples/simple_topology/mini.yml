@@ -3,6 +3,7 @@ autonomous_systems:
   - asn: 42
     routers: 4
     igp: OSPF
-    prefix: '192.168.8.0/28'
+    prefix: '192.168.8.0/24'
     links:
       kind: 'full-mesh'
+      subnet_length: 30
