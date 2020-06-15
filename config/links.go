@@ -1,19 +1,22 @@
 package config
 
 import (
+	"fmt"
 	"net"
-	"os"
 	"strconv"
 
 	"github.com/rahveiz/topomate/utils"
 )
 
+type NetLink struct {
+	RouterIndex int
+	IP          net.IP
+	Speed       int
+}
+
 type Link struct {
-	First    string
-	FirstIP  net.IP
-	Second   string
-	SecondIP net.IP
-	Speed    int
+	First  NetLink
+	Second NetLink
 }
 
 type LinkModule struct {
@@ -21,21 +24,60 @@ type LinkModule struct {
 	Specs []map[string]string `yaml:"specs"`
 }
 
+// IfNames returns the name of both interfaces of a link
+// as "eth" + destination index
+func (l Link) IfNames() (string, string) {
+	a := fmt.Sprintf("eth%d", l.Second.RouterIndex)
+	b := fmt.Sprintf("eth%d", l.First.RouterIndex)
+	return a, b
+}
+
+func (l Link) BrName(asn int) string {
+	return fmt.Sprintf(
+		"as%d-br-%d-%d",
+		asn, l.First.RouterIndex,
+		l.Second.RouterIndex,
+	)
+}
+
+func NewNetLink(index interface{}) NetLink {
+	var idx int
+	var err error
+	switch index.(type) {
+	case int:
+		idx = index.(int)
+		break
+	case string:
+		idx, err = strconv.Atoi(index.(string))
+		if err != nil {
+			utils.Fatalln(err)
+		}
+		break
+	default:
+		utils.Fatalln("NewNetLink: index type mismtach")
+	}
+
+	return NetLink{
+		RouterIndex: idx,
+		IP:          net.IP{},
+		Speed:       10000,
+	}
+}
+
 func (lm *LinkModule) SetupManual() []Link {
 	links := make([]Link, len(lm.Specs))
 	for idx, v := range lm.Specs {
 		l := Link{}
-		if First, ok := v["first"]; ok {
-			l.First = First
+		if first, ok := v["first"]; ok {
+			l.First = NewNetLink(first)
 		} else {
-			utils.PrintError("Manual link setup error: first key missing")
+			utils.Fatalln("Manual link setup error: first key missing")
 		}
-		if Second, ok := v["second"]; ok {
-			l.Second = Second
+		if second, ok := v["second"]; ok {
+			l.Second = NewNetLink(second)
 		} else {
 			utils.PrintError("Manual link setup error: second key missing")
 		}
-		l.Speed = 10000
 		links[idx] = l
 	}
 	return links
@@ -43,15 +85,13 @@ func (lm *LinkModule) SetupManual() []Link {
 
 func (lm *LinkModule) SetupRing(nbRouters int) []Link {
 	if nbRouters < 3 {
-		utils.PrintError("Cannot create ring topology with less than 3 routers.")
-		os.Exit(1)
+		utils.Fatalln("Cannot create ring topology with less than 3 routers.")
 	}
 	links := make([]Link, nbRouters)
 	for i := 1; i <= nbRouters; i++ {
 		links[i-1] = Link{
-			First:  strconv.Itoa(i),
-			Second: strconv.Itoa((i % nbRouters) + 1),
-			Speed:  10000,
+			First:  NewNetLink(i),
+			Second: NewNetLink((i % nbRouters) + 1),
 		}
 
 	}
@@ -67,9 +107,8 @@ func (lm *LinkModule) SetupFullMesh(nbRouters int) []Link {
 	for i := 1; i <= nbRouters; i++ {
 		for j := i + 1; j <= nbRouters; j++ {
 			links[counter] = Link{
-				First:  strconv.Itoa(i),
-				Second: strconv.Itoa(j),
-				Speed:  10000,
+				First:  NewNetLink(i),
+				Second: NewNetLink(j),
 			}
 			counter++
 		}

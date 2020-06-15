@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/rahveiz/topomate/link"
+	"github.com/rahveiz/topomate/utils"
 )
 
 // AutonomousSystem represents an AS in a Project
@@ -17,8 +17,19 @@ type AutonomousSystem struct {
 	Links   []Link
 }
 
-func (a *AutonomousSystem) getContainerName(n string) string {
-	return "AS" + strconv.Itoa(a.ASN) + "-R" + n
+func (a *AutonomousSystem) getContainerName(n interface{}) string {
+	var name string
+	switch n.(type) {
+	case int:
+		name = fmt.Sprintf("AS%d-R%d", a.ASN, n.(int))
+		break
+	case string:
+		name = fmt.Sprintf("AS%d-R%s", a.ASN, n.(string))
+		break
+	default:
+		utils.Fatalln("getContainerName: n type mismatch")
+	}
+	return name
 }
 
 // SetupLinks generates the L2 configuration based on provided config
@@ -38,17 +49,17 @@ func (a *AutonomousSystem) SetupLinks(cfg LinkModule) {
 // ApplyLinks applies the L2 configuration using OVS
 func (a *AutonomousSystem) ApplyLinks() {
 	for _, v := range a.Links {
-		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.First, v.Second)
+		brName := v.BrName(a.ASN)
+		ifa, ifb := v.IfNames()
 		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, "eth"+v.Second, a.getContainerName(v.First))
-		link.AddPortToContainer(brName, "eth"+v.First, a.getContainerName(v.Second))
+		link.AddPortToContainer(brName, ifa, a.getContainerName(v.First))
+		link.AddPortToContainer(brName, ifb, a.getContainerName(v.Second))
 	}
 }
 
 // RemoveLinks removes the L2 configuration of an AS
 func (a *AutonomousSystem) RemoveLinks() {
 	for _, v := range a.Links {
-		brName := fmt.Sprintf("as%d-br-%s-%s", a.ASN, v.First, v.Second)
-		link.DeleteBridge(brName)
+		link.DeleteBridge(v.BrName(a.ASN))
 	}
 }
