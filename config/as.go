@@ -15,7 +15,7 @@ type AutonomousSystem struct {
 	ASN     int
 	IGP     string
 	Network Net
-	Routers []Router
+	Routers []*Router
 	Links   []Link
 }
 
@@ -54,8 +54,8 @@ func (a *AutonomousSystem) ApplyLinks() {
 		brName := v.BrName(a.ASN)
 		ifa, ifb := v.IfNames()
 		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, ifa, a.getContainerName(v.First))
-		link.AddPortToContainer(brName, ifb, a.getContainerName(v.Second))
+		link.AddPortToContainer(brName, ifa, a.getContainerName(v.First.RouterIndex))
+		link.AddPortToContainer(brName, ifb, a.getContainerName(v.Second.RouterIndex))
 	}
 }
 
@@ -96,3 +96,57 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 
 	}
 }
+
+func (a *AutonomousSystem) linkRouters() {
+	for _, lnk := range a.Links {
+		first := lnk.First
+		a.Routers[first.RouterIndex-1].Links =
+			append(a.Routers[first.RouterIndex-1].Links, first)
+		second := lnk.Second
+		a.Routers[second.RouterIndex-1].Links =
+			append(a.Routers[second.RouterIndex-1].Links, second)
+	}
+}
+
+// func (a *AutonomousSystem) SetIPs() {
+// 	for _, v := range a.Links {
+// 		ifa, _ := v.IfNames()
+
+// 		cmdArgs := []string{
+// 			"exec",
+// 			"",
+// 			"vtysh",
+// 			"-c", "conf t",
+// 			"-c", "",
+// 			"-c", "",
+// 		}
+
+// 		// First
+// 		cmdArgs[1] = a.Routers[v.First.RouterIndex-1].ContainerName
+// 		cmdArgs[6] = fmt.Sprintf("interface %s", ifa)
+// 		cmdArgs[8] = fmt.Sprintf("ip address %s/%d", v.First.IP.String(), v.SubnetLength)
+// 		// fmt.Println(exec.Command("docker", cmdArgs...).String())
+// 		// res, err := exec.Command("docker", "exec", a.Routers[v.First.RouterIndex-1].ContainerName, "vtysh", "-c", "conf t").CombinedOutput()
+// 		res, err := exec.Command(
+// 			"docker",
+// 			cmdArgs...,
+// 		).CombinedOutput()
+
+// 		fmt.Println(string(res))
+// 		if err != nil {
+// 			utils.Fatalln(err)
+// 		}
+
+// 		// Second
+// 		// cmdArgs[1] = a.Routers[v.Second.RouterIndex-1].ContainerName
+// 		// cmdArgs[5] = fmt.Sprintf("'interface %s'", ifb)
+// 		// cmdArgs[7] = fmt.Sprintf("'ip address %s/%d'", v.Second.IP.String(), v.SubnetLength)
+// 		// _, err = exec.Command(
+// 		// 	"docker",
+// 		// 	cmdArgs...,
+// 		// ).CombinedOutput()
+// 		// if err != nil {
+// 		// 	utils.Fatalln(err)
+// 		// }
+// 	}
+// }

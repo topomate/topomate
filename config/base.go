@@ -51,14 +51,14 @@ func ReadConfig(path string) *Project {
 		proj.AS[idx] = &AutonomousSystem{
 			ASN:     k.ASN,
 			IGP:     k.IGP,
-			Routers: make([]Router, k.NumRouters),
+			Routers: make([]*Router, k.NumRouters),
 		}
 
 		a := proj.AS[idx]
 
 		for i := 0; i < k.NumRouters; i++ {
 			host := "R" + strconv.Itoa(i+1)
-			a.Routers[i] = Router{
+			a.Routers[i] = &Router{
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
 			}
@@ -78,6 +78,7 @@ func ReadConfig(path string) *Project {
 		}
 
 		a.ReserveSubnets(k.LinksConfig.SubnetLength)
+		a.linkRouters()
 	}
 	return proj
 }
@@ -100,7 +101,7 @@ func (p *Project) StartAll() {
 				r.StartContainer(nil)
 				wg.Done()
 
-			}(v.Routers[i], &wg)
+			}(*v.Routers[i], &wg)
 		}
 	}
 	wg.Wait()
@@ -117,7 +118,7 @@ func (p *Project) StopAll() {
 			go func(r Router, wg *sync.WaitGroup) {
 				r.StopContainer(nil)
 				wg.Done()
-			}(v.Routers[i], &wg)
+			}(*v.Routers[i], &wg)
 		}
 	}
 	wg.Wait()

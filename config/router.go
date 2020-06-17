@@ -14,6 +14,7 @@ import (
 type Router struct {
 	Hostname      string
 	ContainerName string
+	Links         []*NetLink
 }
 
 func (r *Router) StartContainer(wg *sync.WaitGroup) {
