@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/uuid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/viper"
 )
 
@@ -60,7 +61,7 @@ func getProjectDirectory() string {
 }
 
 func getProjectFile(name string) string {
-	d := getProjectDirectory()
+	d := utils.GetDirectoryFromKey("project", "~/.topomate")
 	filename := fmt.Sprintf("%s/%s.json", d, name)
 	return filename
 }
@@ -95,7 +96,7 @@ func Save(name string, v interface{}) {
 }
 
 func List() {
-	d := getProjectDirectory()
+	d := utils.GetDirectoryFromKey("project", "~/.topomate")
 	files, err := ioutil.ReadDir(d)
 	if err != nil {
 		log.Fatalln(err)

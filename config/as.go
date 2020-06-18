@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -93,7 +94,10 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 			assigned = 0
 			ip = n.IP
 		}
-
+	}
+	a.Network.NextAvailable = &net.IPNet{
+		IP:   cidr.Inc(ip),
+		Mask: n.Mask,
 	}
 }
 
@@ -107,46 +111,3 @@ func (a *AutonomousSystem) linkRouters() {
 			append(a.Routers[second.RouterIndex-1].Links, second)
 	}
 }
-
-// func (a *AutonomousSystem) SetIPs() {
-// 	for _, v := range a.Links {
-// 		ifa, _ := v.IfNames()
-
-// 		cmdArgs := []string{
-// 			"exec",
-// 			"",
-// 			"vtysh",
-// 			"-c", "conf t",
-// 			"-c", "",
-// 			"-c", "",
-// 		}
-
-// 		// First
-// 		cmdArgs[1] = a.Routers[v.First.RouterIndex-1].ContainerName
-// 		cmdArgs[6] = fmt.Sprintf("interface %s", ifa)
-// 		cmdArgs[8] = fmt.Sprintf("ip address %s/%d", v.First.IP.String(), v.SubnetLength)
-// 		// fmt.Println(exec.Command("docker", cmdArgs...).String())
-// 		// res, err := exec.Command("docker", "exec", a.Routers[v.First.RouterIndex-1].ContainerName, "vtysh", "-c", "conf t").CombinedOutput()
-// 		res, err := exec.Command(
-// 			"docker",
-// 			cmdArgs...,
-// 		).CombinedOutput()
-
-// 		fmt.Println(string(res))
-// 		if err != nil {
-// 			utils.Fatalln(err)
-// 		}
-
-// 		// Second
-// 		// cmdArgs[1] = a.Routers[v.Second.RouterIndex-1].ContainerName
-// 		// cmdArgs[5] = fmt.Sprintf("'interface %s'", ifb)
-// 		// cmdArgs[7] = fmt.Sprintf("'ip address %s/%d'", v.Second.IP.String(), v.SubnetLength)
-// 		// _, err = exec.Command(
-// 		// 	"docker",
-// 		// 	cmdArgs...,
-// 		// ).CombinedOutput()
-// 		// if err != nil {
-// 		// 	utils.Fatalln(err)
-// 		// }
-// 	}
-// }

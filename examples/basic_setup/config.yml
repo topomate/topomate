@@ -1,0 +1,24 @@
+name: "foobar"
+autonomous_systems:
+  - asn: 10
+    routers: 4
+    igp: OSPF
+    prefix: '192.168.8.0/26'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 20
+    routers: 2
+    igp: OSPF
+    prefix: '10.10.10.0/28'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30  
+  
+external_links:
+  - from:
+      asn: 10
+      router_id: 1
+    to:
+      asn: 20
+      router_id: 2
