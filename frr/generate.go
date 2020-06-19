@@ -35,7 +35,7 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 			c.BGP = BGPConfig{
 				ASN:       i,
 				Neighbors: make(map[string]BGPNbr, n),
-				Networks:  []string{as.Network.IPNet.IP.String()},
+				Networks:  []string{as.Network.IPNet.String()},
 			}
 			for ip, nbr := range r.Neighbors { // eBGP
 				c.BGP.Neighbors[ip] = BGPNbr(nbr)
