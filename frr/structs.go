@@ -2,6 +2,8 @@ package frr
 
 import (
 	"net"
+
+	"github.com/rahveiz/topomate/project"
 )
 
 type FRRConfig struct {
@@ -17,12 +19,7 @@ type IfConfig struct {
 	OSPF        []int
 }
 
-type BGPNbr struct {
-	RemoteAS     int
-	UpdateSource string
-	ConnCheck    bool
-	NextHopSelf  bool
-}
+type BGPNbr project.BGPNbr
 
 type BGPConfig struct {
 	ASN       int

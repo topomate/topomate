@@ -71,18 +71,17 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 	}
 }
 
-// ApplyLinks applies the L2 configuration using OVS
+// ApplyLinks applies the internal L2 configuration using OVS
 func (a *AutonomousSystem) ApplyLinks() {
 	for _, v := range a.Links {
 		brName := v.BrName(a.ASN)
-		ifa, ifb := v.IfNames()
 		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, ifa, a.getContainerName(v.First.RouterID))
-		link.AddPortToContainer(brName, ifb, a.getContainerName(v.Second.RouterID))
+		link.AddPortToContainer(brName, v.First.IfName, a.getContainerName(v.First.RouterID))
+		link.AddPortToContainer(brName, v.Second.IfName, a.getContainerName(v.Second.RouterID))
 	}
 }
 
-// RemoveLinks removes the L2 configuration of an AS
+// RemoveLinks removes the internal L2 configuration of an AS
 func (a *AutonomousSystem) RemoveLinks() {
 	for _, v := range a.Links {
 		link.DeleteBridge(v.BrName(a.ASN))
@@ -128,10 +127,24 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 func (a *AutonomousSystem) linkRouters() {
 	for _, lnk := range a.Links {
 		first := lnk.First
+		second := lnk.Second
+
 		a.Routers[first.RouterID-1].Links =
 			append(a.Routers[first.RouterID-1].Links, first)
-		second := lnk.Second
+		a.Routers[first.RouterID-1].Neighbors[second.IP.IP.String()] = BGPNbr{
+			RemoteAS:     a.ASN,
+			UpdateSource: "lo",
+			ConnCheck:    false,
+			NextHopSelf:  false,
+		}
+
 		a.Routers[second.RouterID-1].Links =
 			append(a.Routers[second.RouterID-1].Links, second)
+		a.Routers[second.RouterID-1].Neighbors[first.IP.IP.String()] = BGPNbr{
+			RemoteAS:     a.ASN,
+			UpdateSource: "lo",
+			ConnCheck:    false,
+			NextHopSelf:  false,
+		}
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/internal/link"
 	"github.com/rahveiz/topomate/utils"
@@ -32,9 +31,11 @@ func ReadConfig(path string) *Project {
 	err = yaml.Unmarshal(data, conf)
 	utils.Check(err)
 
+	nbAS := len(conf.AS)
+
 	proj := &Project{
 		Name: conf.Name,
-		AS:   make(map[int]*AutonomousSystem, len(conf.AS)),
+		AS:   make(map[int]*AutonomousSystem, nbAS),
 	}
 
 	// Generate routers
@@ -55,6 +56,7 @@ func ReadConfig(path string) *Project {
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
 				NextInterface: 0,
+				Neighbors:     make(map[string]BGPNbr, k.NumRouters+nbAS),
 			}
 		}
 
@@ -91,24 +93,32 @@ func ReadConfig(path string) *Project {
 		l.SetupExternal(&proj.AS[k.From.ASN].Network.NextAvailable)
 		proj.Ext = append(proj.Ext, l)
 	}
-
+	proj.linkExternal()
 	return proj
 }
 
 func (p *Project) Print() {
-
+	// for _, l := range p.Ext {
+	// 	fmt.Println(l.From.Interface, l.To.Interface)
+	// }
 }
 
 func (p *Project) StartAll() {
 	var wg sync.WaitGroup
-	for _, v := range p.AS {
+	for asn, v := range p.AS {
 		wg.Add(len(v.Routers))
 		for i := 0; i < len(v.Routers); i++ {
-			go func(r Router, wg *sync.WaitGroup) {
-				r.StartContainer(nil)
+			configPath := fmt.Sprintf(
+				"%s/conf_%d_%s",
+				utils.GetDirectoryFromKey("config_dir", "~/.topogen"),
+				asn,
+				v.Routers[i].Hostname,
+			)
+			go func(r Router, wg *sync.WaitGroup, path string) {
+				r.StartContainer(nil, path)
 				wg.Done()
 
-			}(*v.Routers[i], &wg)
+			}(*v.Routers[i], &wg, configPath)
 		}
 	}
 	wg.Wait()
@@ -133,36 +143,7 @@ func (p *Project) StopAll() {
 	for _, v := range p.AS {
 		v.RemoveLinks()
 	}
-}
-
-func (e *ExternalLink) SetupExternal(p **net.IPNet) {
-	if p == nil {
-		return
-	}
-	prefix := *p
-	prefixLen, _ := prefix.Mask.Size()
-	addrCnt := cidr.AddressCount(prefix) - 2 // number of hosts available
-	assigned := uint64(0)
-
-	e.From.IP = &net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
-	}
-	prefix.IP = cidr.Inc(prefix.IP)
-	e.To.IP = &net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
-	}
-	assigned += 2
-
-	// check if we need to get next subnet
-	if assigned+2 > addrCnt {
-		prefix, _ = cidr.NextSubnet(prefix, prefixLen)
-		assigned = 0
-	}
-
-	(*p).IP = cidr.Inc(prefix.IP)
-
+	p.RemoveExternal()
 }
 
 func (p Project) ApplyExternal() {
@@ -173,10 +154,51 @@ func (p Project) ApplyExternal() {
 			v.To.ASN,
 			v.To.Router.Hostname,
 		)
-		ifa := fmt.Sprintf("toAS%d", v.To.ASN)
-		ifb := fmt.Sprintf("toAS%d", v.From.ASN)
+
 		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, ifa, v.From.Router.ContainerName)
-		link.AddPortToContainer(brName, ifb, v.To.Router.ContainerName)
+		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName)
+		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName)
+	}
+}
+
+func (p Project) RemoveExternal() {
+	for _, v := range p.Ext {
+		brName := fmt.Sprintf("ext-%d%s-%d%s",
+			v.From.ASN,
+			v.From.Router.Hostname,
+			v.To.ASN,
+			v.To.Router.Hostname,
+		)
+
+		link.DeleteBridge(brName)
+	}
+}
+
+func (p *Project) linkExternal() {
+	for _, lnk := range p.Ext {
+
+		lnk.From.Interface.Description = fmt.Sprintf("linked to AS%d (%s)", lnk.To.ASN, lnk.To.Router.Hostname)
+		lnk.From.Router.Links =
+			append(lnk.From.Router.Links, lnk.From.Interface)
+		// lnk.From.Router.ExtLinks =
+		// 	append(lnk.From.Router.ExtLinks, NetInterfaceExt{ASN: lnk.To.ASN, Interface: lnk.To.Interface})
+		lnk.From.Router.Neighbors[lnk.To.Interface.IP.IP.String()] = BGPNbr{
+			RemoteAS:     lnk.To.ASN,
+			UpdateSource: "lo",
+			ConnCheck:    false,
+			NextHopSelf:  false,
+		}
+
+		lnk.To.Interface.Description = fmt.Sprintf("linked to AS%d (%s)", lnk.From.ASN, lnk.From.Router.Hostname)
+		lnk.To.Router.Links =
+			append(lnk.To.Router.Links, lnk.To.Interface)
+		// lnk.To.Router.ExtLinks =
+		// 	append(lnk.To.Router.ExtLinks, NetInterfaceExt{ASN: lnk.From.ASN, Interface: lnk.From.Interface})
+		lnk.To.Router.Neighbors[lnk.From.Interface.IP.IP.String()] = BGPNbr{
+			RemoteAS:     lnk.From.ASN,
+			UpdateSource: "lo",
+			ConnCheck:    false,
+			NextHopSelf:  false,
+		}
 	}
 }

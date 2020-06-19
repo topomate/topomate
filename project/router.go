@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"os/exec"
 	"sync"
 
 	"github.com/docker/docker/api/types"
@@ -11,15 +12,23 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+type BGPNbr struct {
+	RemoteAS     int
+	UpdateSource string
+	ConnCheck    bool
+	NextHopSelf  bool
+}
+
 type Router struct {
 	ID            int
 	Hostname      string
 	ContainerName string
 	Links         []*NetInterface
+	Neighbors     map[string]BGPNbr
 	NextInterface int
 }
 
-func (r *Router) StartContainer(wg *sync.WaitGroup) {
+func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	utils.Check(err)
@@ -48,6 +57,11 @@ func (r *Router) StartContainer(wg *sync.WaitGroup) {
 		containerID = li[0].ID
 	}
 
+	// If configPath is set, copy the configuration into the container
+	if configPath != "" {
+		r.CopyConfig(configPath)
+	}
+
 	// Start container
 	if err := cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -66,5 +80,17 @@ func (r *Router) StopContainer(wg *sync.WaitGroup) {
 
 	if err := cli.ContainerStop(ctx, r.ContainerName, nil); err != nil {
 		panic(err)
+	}
+}
+
+func (r *Router) CopyConfig(configPath string) {
+	_, err := exec.Command(
+		"docker",
+		"cp",
+		configPath,
+		r.ContainerName+":/etc/frr/frr.conf",
+	).CombinedOutput()
+	if err != nil {
+		utils.Fatalln(err)
 	}
 }

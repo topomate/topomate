@@ -23,11 +23,11 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				Interfaces: make(map[string]IfConfig, n),
 			}
 
-			// Interfaces
-			for _, i := range r.Links {
-				c.Interfaces[i.IfName] = IfConfig{
-					IPs:         []net.IPNet{i.IP},
-					Description: i.Description,
+			// Internal interfaces
+			for _, iface := range r.Links {
+				c.Interfaces[iface.IfName] = IfConfig{
+					IPs:         []net.IPNet{iface.IP},
+					Description: iface.Description,
 				}
 			}
 
@@ -37,15 +37,9 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				Neighbors: make(map[string]BGPNbr, n),
 				Networks:  []string{as.Network.IPNet.IP.String()},
 			}
-			for _, lnk := range r.Links {
-				c.BGP.Neighbors[lnk.IP.String()] = BGPNbr{
-					RemoteAS:     i,
-					ConnCheck:    false,
-					NextHopSelf:  false, //lnk.RouterID < 2,
-					UpdateSource: "lo",
-				}
+			for ip, nbr := range r.Neighbors { // eBGP
+				c.BGP.Neighbors[ip] = BGPNbr(nbr)
 			}
-
 			// IGP
 			switch strings.ToUpper(as.IGP) {
 			case "OSPF":
@@ -131,12 +125,11 @@ func WriteConfig(c FRRConfig) {
 	fmt.Fprintf(dst,
 		`frr version 7.3
 frr defaults traditional
+hostname %s
 log syslog informational
 no ipv6 forwarding
 service integrated-vtysh-config
-`)
-	sep(dst)
-	fmt.Fprintln(dst, "hostname", c.Hostname)
+`, c.Hostname)
 	sep(dst)
 
 	for name, cfg := range c.Interfaces {
@@ -154,6 +147,8 @@ service integrated-vtysh-config
 			break
 		}
 	}
+
+	fmt.Fprintln(dst, "line vty")
 
 	file.WriteString(dst.String())
 
