@@ -10,7 +10,6 @@ import (
 
 	"github.com/docker/distribution/uuid"
 	"github.com/mitchellh/go-homedir"
-	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/viper"
 )
@@ -102,7 +101,7 @@ func List() {
 		log.Fatalln(err)
 	}
 	for _, f := range files {
-		c := config.Project{}
+		c := Project{}
 		filename := f.Name()
 		b, err := ioutil.ReadFile(d + "/" + filename)
 		if err != nil {
@@ -116,8 +115,8 @@ func List() {
 	}
 }
 
-func Get(name string) *config.Project {
-	c := &config.Project{}
+func Get(name string) *Project {
+	c := &Project{}
 	b, err := ioutil.ReadFile(getProjectFile(name))
 	if err != nil {
 		log.Fatalln(err)

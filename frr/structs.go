@@ -12,8 +12,9 @@ type FRRConfig struct {
 }
 
 type IfConfig struct {
-	IPs  []net.IPNet
-	OSPF []int
+	Description string
+	IPs         []net.IPNet
+	OSPF        []int
 }
 
 type BGPNbr struct {

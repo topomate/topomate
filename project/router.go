@@ -1,4 +1,4 @@
-package config
+package project
 
 import (
 	"context"
@@ -12,9 +12,11 @@ import (
 )
 
 type Router struct {
+	ID            int
 	Hostname      string
 	ContainerName string
-	Links         []*NetLink
+	Links         []*NetInterface
+	NextInterface int
 }
 
 func (r *Router) StartContainer(wg *sync.WaitGroup) {

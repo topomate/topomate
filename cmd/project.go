@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
 
 	"github.com/spf13/cobra"
@@ -40,7 +39,7 @@ var createCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalln(err)
 		}
-		newConf := config.ReadConfig(target)
+		newConf := project.ReadConfig(target)
 		project.Save(args[0], newConf)
 		fmt.Printf("Project %s created\n", target)
 	},

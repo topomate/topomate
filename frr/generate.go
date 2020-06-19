@@ -3,36 +3,45 @@ package frr
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 
-	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/project"
 	"github.com/rahveiz/topomate/utils"
 )
 
-func GenerateConfig(p *config.Project) [][]FRRConfig {
+func GenerateConfig(p *project.Project) [][]FRRConfig {
 	configs := make([][]FRRConfig, len(p.AS))
-
+	idx := 0
 	for i, as := range p.AS {
 		n := len(as.Routers)
-		configs[i] = make([]FRRConfig, n)
+		configs[idx] = make([]FRRConfig, n)
 		for j, r := range as.Routers {
 			c := FRRConfig{
 				Hostname:   r.Hostname,
 				Interfaces: make(map[string]IfConfig, n),
 			}
 
+			// Interfaces
+			for _, i := range r.Links {
+				c.Interfaces[i.IfName] = IfConfig{
+					IPs:         []net.IPNet{i.IP},
+					Description: i.Description,
+				}
+			}
+
 			// BGP
 			c.BGP = BGPConfig{
-				ASN:       as.ASN,
+				ASN:       i,
 				Neighbors: make(map[string]BGPNbr, n),
 				Networks:  []string{as.Network.IPNet.IP.String()},
 			}
 			for _, lnk := range r.Links {
 				c.BGP.Neighbors[lnk.IP.String()] = BGPNbr{
-					RemoteAS:     as.ASN,
+					RemoteAS:     i,
 					ConnCheck:    false,
-					NextHopSelf:  false, //lnk.RouterIndex < 2,
+					NextHopSelf:  false, //lnk.RouterID < 2,
 					UpdateSource: "lo",
 				}
 			}
@@ -45,8 +54,9 @@ func GenerateConfig(p *config.Project) [][]FRRConfig {
 				break
 			}
 
-			configs[i][j] = c
+			configs[idx][j] = c
 		}
+		idx++
 	}
 	return configs
 }
@@ -96,6 +106,18 @@ func writeOSPF(dst io.Writer, c OSPFConfig) {
 	sep(dst)
 }
 
+func writeInterface(dst io.Writer, name string, c IfConfig) {
+	sep(dst)
+
+	fmt.Fprintln(dst, "interface", name)
+	fmt.Fprintln(dst, " description", c.Description)
+	for _, ip := range c.IPs {
+		fmt.Fprintln(dst, " ip address", ip.String())
+	}
+
+	sep(dst)
+}
+
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("config_directory", "~/.topogen")
 	file, err := os.Create(fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname))
@@ -116,7 +138,13 @@ service integrated-vtysh-config
 	sep(dst)
 	fmt.Fprintln(dst, "hostname", c.Hostname)
 	sep(dst)
+
+	for name, cfg := range c.Interfaces {
+		writeInterface(dst, name, cfg)
+	}
+
 	writeBGP(dst, c.BGP)
+
 	for _, igp := range c.IGP {
 		switch igp.(type) {
 		case OSPFConfig:
@@ -126,6 +154,7 @@ service integrated-vtysh-config
 			break
 		}
 	}
+
 	file.WriteString(dst.String())
 
 }
@@ -140,7 +169,7 @@ func WriteAll(configs [][]FRRConfig) {
 
 /* OSPF CONFIGURATION */
 
-func getOSPFConfig(as config.AutonomousSystem) OSPFConfig {
+func getOSPFConfig(as project.AutonomousSystem) OSPFConfig {
 	cfg := OSPFConfig{
 		ProcessID: 0,
 		Redistribute: RouteRedistribution{

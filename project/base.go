@@ -1,4 +1,4 @@
-package config
+package project
 
 import (
 	"fmt"
@@ -9,55 +9,22 @@ import (
 	"sync"
 
 	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/rahveiz/topomate/link"
+	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/internal/link"
 	"github.com/rahveiz/topomate/utils"
 
 	"gopkg.in/yaml.v2"
 )
 
-type ASConfig struct {
-	ASN         int        `yaml:"asn,omitempty"`
-	NumRouters  int        `yaml:"routers,omitempty"`
-	IGP         string     `yaml:"igp,omitempty"`
-	Prefix      string     `yaml:"prefix,omitempty"`
-	LinksConfig LinkModule `yaml:"links,omitempty"`
-}
-type BaseConfig struct {
-	Name     string           `yaml:"name"`
-	AS       []ASConfig       `yaml:"autonomous_systems"`
-	External []ExternalConfig `yaml:"external_links"`
-}
-
-type ExternalLink struct {
-	ASN      int `yaml:"asn"`
-	RouterID int `yaml:"router_id"`
-}
-
-type ExternalConfig struct {
-	From ExternalLink `yaml:"from"`
-	To   ExternalLink `yaml:"to"`
-}
-
-type ExternalEndpoint struct {
-	ASN    int
-	Router *Router
-	IP     *net.IPNet
-}
-
-type External struct {
-	From ExternalEndpoint
-	To   ExternalEndpoint
-}
-
 type Project struct {
 	Name string
 	AS   map[int]*AutonomousSystem
-	Ext  []*External
+	Ext  []*ExternalLink
 }
 
 // ReadConfig reads a yaml file, parses it and returns a Project
 func ReadConfig(path string) *Project {
-	conf := &BaseConfig{}
+	conf := &config.BaseConfig{}
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatalln(err)
@@ -84,13 +51,15 @@ func ReadConfig(path string) *Project {
 		for i := 0; i < k.NumRouters; i++ {
 			host := "R" + strconv.Itoa(i+1)
 			a.Routers[i] = &Router{
+				ID:            i + 1,
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
+				NextInterface: 0,
 			}
 		}
 
 		// Setup links
-		a.SetupLinks(k.LinksConfig)
+		a.SetupLinks(k.Links)
 
 		// Parse network prefix
 		_, n, err := net.ParseCIDR(k.Prefix)
@@ -101,7 +70,7 @@ func ReadConfig(path string) *Project {
 			IPNet: n,
 		}
 
-		a.ReserveSubnets(k.LinksConfig.SubnetLength)
+		a.ReserveSubnets(k.Links.SubnetLength)
 		a.linkRouters()
 
 	}
@@ -109,7 +78,7 @@ func ReadConfig(path string) *Project {
 	// External links setup
 
 	for _, k := range conf.External {
-		l := &External{
+		l := &ExternalLink{
 			From: ExternalEndpoint{
 				ASN:    k.From.ASN,
 				Router: proj.AS[k.From.ASN].Routers[k.From.RouterID-1],
@@ -127,17 +96,6 @@ func ReadConfig(path string) *Project {
 }
 
 func (p *Project) Print() {
-	for _, v := range p.AS {
-		for _, e := range v.Links {
-			fmt.Println(e.First, e.Second)
-		}
-		fmt.Println(v.Network.NextAvailable)
-	}
-
-	for _, v := range p.Ext {
-		fmt.Println(*v)
-		fmt.Println()
-	}
 
 }
 
@@ -177,7 +135,7 @@ func (p *Project) StopAll() {
 	}
 }
 
-func (e *External) SetupExternal(p **net.IPNet) {
+func (e *ExternalLink) SetupExternal(p **net.IPNet) {
 	if p == nil {
 		return
 	}

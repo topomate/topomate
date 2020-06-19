@@ -26,7 +26,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
 	"github.com/spf13/cobra"
 
@@ -118,7 +117,7 @@ func getTarget(cmd *cobra.Command, args []string) string {
 	return args[0]
 }
 
-func getConfig(cmd *cobra.Command, args []string) *config.Project {
+func getConfig(cmd *cobra.Command, args []string) *project.Project {
 	if cmd.Flags().Changed("project") {
 		var err error
 		target, err := cmd.Flags().GetString("project")
@@ -132,5 +131,5 @@ func getConfig(cmd *cobra.Command, args []string) *config.Project {
 		log.Fatalln("File or project not specified")
 	}
 
-	return config.ReadConfig(args[0])
+	return project.ReadConfig(args[0])
 }
