@@ -1,6 +1,7 @@
 package link
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/digitalocean/go-openvswitch/ovs"
@@ -47,7 +48,7 @@ func DeleteBridge(name string) {
 // AddPortToContainer links a container to an OVS bridge using
 // the ovs-docker script
 func AddPortToContainer(brName, ifName, containerName string) {
-	_, err := utils.ExecSudo(
+	out, err := utils.ExecSudo(
 		"ovs-docker",
 		"add-port",
 		brName,
@@ -55,6 +56,7 @@ func AddPortToContainer(brName, ifName, containerName string) {
 		containerName,
 	).CombinedOutput()
 	if err != nil {
+		fmt.Println(out)
 		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
 }

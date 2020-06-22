@@ -1,16 +1,10 @@
 package project
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 )
-
-type NetInterfaceExt struct {
-	ASN       int
-	Interface *NetInterface
-}
 
 type ExternalEndpoint struct {
 	ASN       int
@@ -23,24 +17,15 @@ type ExternalLink struct {
 	To   ExternalEndpoint
 }
 
-func NewNetInterfaceExt(asn int, router *Router) NetInterfaceExt {
-	ifName := fmt.Sprintf("eth%d", router.NextInterface)
-	router.NextInterface++
-	iface := &NetInterface{
-		RouterID: router.ID,
-		IfName:   ifName,
-		IP:       net.IPNet{},
-		Speed:    10000,
-	}
-	return NetInterfaceExt{
-		ASN:       asn,
-		Interface: iface,
-	}
+func NewNetInterfaceExt(router *Router) *NetInterface {
+	res := NewNetInterface(router)
+	res.External = true
+	return res
 }
 
 func (e *ExternalLink) SetupExternal(p **net.IPNet) {
-	e.From.Interface = NewNetInterface(e.From.Router)
-	e.To.Interface = NewNetInterface(e.To.Router)
+	e.From.Interface = NewNetInterfaceExt(e.From.Router)
+	e.To.Interface = NewNetInterfaceExt(e.To.Router)
 	if p == nil {
 		return
 	}

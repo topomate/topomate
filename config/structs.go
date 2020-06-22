@@ -1,17 +1,19 @@
 package config
 
 type BaseConfig struct {
-	Name     string         `yaml:"name"`
+	Name     string         `yaml:"name,omitempty"`
 	AS       []ASConfig     `yaml:"autonomous_systems"`
 	External []ExternalLink `yaml:"external_links"`
 }
 
 type ASConfig struct {
-	ASN        int           `yaml:"asn,omitempty"`
-	NumRouters int           `yaml:"routers,omitempty"`
-	IGP        string        `yaml:"igp,omitempty"`
-	Prefix     string        `yaml:"prefix,omitempty"`
-	Links      InternalLinks `yaml:"links,omitempty"`
+	ASN             int           `yaml:"asn,omitempty"`
+	NumRouters      int           `yaml:"routers,omitempty"`
+	IGP             string        `yaml:"igp,omitempty"`
+	RedistributeIGP bool          `yaml:"redistribute_igp"`
+	Prefix          string        `yaml:"prefix,omitempty"`
+	LoRange         string        `yaml:"loopback_start,omitempty"`
+	Links           InternalLinks `yaml:"links,omitempty"`
 }
 
 type ExternalEndpoint struct {

@@ -19,15 +19,20 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 		configs[idx] = make([]FRRConfig, n)
 		for j, r := range as.Routers {
 			c := FRRConfig{
-				Hostname:   r.Hostname,
-				Interfaces: make(map[string]IfConfig, n),
+				Hostname:     r.Hostname,
+				Interfaces:   make(map[string]IfConfig, n),
+				StaticRoutes: make(staticRoutes, len(r.Links)),
 			}
 
-			// Internal interfaces
-			for _, iface := range r.Links {
-				c.Interfaces[iface.IfName] = IfConfig{
-					IPs:         []net.IPNet{iface.IP},
-					Description: iface.Description,
+			// Loopback interface
+			nbLo := len(r.Loopback)
+			if nbLo > 0 {
+				ips := make([]net.IPNet, nbLo)
+				for idx, ip := range r.Loopback {
+					ips[idx] = ip
+				}
+				c.Interfaces["lo"] = IfConfig{
+					IPs: ips,
 				}
 			}
 
@@ -37,15 +42,43 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				Neighbors: make(map[string]BGPNbr, n),
 				Networks:  []string{as.Network.IPNet.String()},
 			}
-			for ip, nbr := range r.Neighbors { // eBGP
-				c.BGP.Neighbors[ip] = BGPNbr(nbr)
+
+			if len(r.Loopback) > 0 {
+				c.BGP.RouterID = r.Loopback[0].IP.String()
 			}
+
+			for ip, nbr := range r.Neighbors {
+				c.BGP.Neighbors[ip] = BGPNbr(nbr)
+				if nbr.RemoteAS != as.ASN {
+					c.StaticRoutes[nbr.IfName] =
+						append(c.StaticRoutes[nbr.IfName], ip+"/32")
+				}
+			}
+
 			// IGP
-			switch strings.ToUpper(as.IGP) {
+			igp := strings.ToUpper(as.IGP)
+			switch igp {
 			case "OSPF":
 				c.IGP = append(c.IGP, getOSPFConfig(*as))
+				if as.RedistributeIGP {
+					c.BGP.Redistribute.OSPF = true
+				}
+				break
 			default:
 				break
+			}
+
+			// Interfaces
+			for _, iface := range r.Links {
+				ifCfg := IfConfig{
+					IPs:         []net.IPNet{iface.IP},
+					Description: iface.Description,
+					OSPF:        -1,
+				}
+				if igp == "OSPF" && !iface.External {
+					ifCfg.OSPF = 0
+				}
+				c.Interfaces[iface.IfName] = ifCfg
 			}
 
 			configs[idx][j] = c
@@ -59,9 +92,22 @@ func sep(w io.Writer) {
 	fmt.Fprintln(w, "!")
 }
 
+func writeStatic(dst io.Writer, routes staticRoutes) {
+	sep(dst)
+	for ifName, ips := range routes {
+		for _, ip := range ips {
+			fmt.Fprintln(dst, "ip route", ip, ifName)
+		}
+	}
+	sep(dst)
+}
+
 func writeBGP(dst io.Writer, c BGPConfig) {
 	sep(dst)
 	fmt.Fprintln(dst, "router bgp", c.ASN)
+	if c.RouterID != "" {
+		fmt.Fprintln(dst, " bgp router-id", c.RouterID)
+	}
 	for ip, v := range c.Neighbors {
 		fmt.Fprintln(dst, " neighbor", ip, "remote-as", v.RemoteAS)
 		fmt.Fprintln(dst, " neighbor", ip, "update-source", v.UpdateSource)
@@ -74,6 +120,7 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 
 	// address-family
 	fmt.Fprintln(dst, " address-family ipv4 unicast")
+	c.Redistribute.Write(dst, 2)
 	for _, network := range c.Networks {
 		fmt.Fprintln(dst, "  network", network)
 	}
@@ -104,9 +151,14 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 	sep(dst)
 
 	fmt.Fprintln(dst, "interface", name)
-	fmt.Fprintln(dst, " description", c.Description)
+	if c.Description != "" {
+		fmt.Fprintln(dst, " description", c.Description)
+	}
 	for _, ip := range c.IPs {
 		fmt.Fprintln(dst, " ip address", ip.String())
+	}
+	if c.OSPF != -1 {
+		fmt.Fprintln(dst, " ip ospf area", c.OSPF)
 	}
 
 	sep(dst)
@@ -135,6 +187,8 @@ service integrated-vtysh-config
 	for name, cfg := range c.Interfaces {
 		writeInterface(dst, name, cfg)
 	}
+
+	writeStatic(dst, c.StaticRoutes)
 
 	writeBGP(dst, c.BGP)
 

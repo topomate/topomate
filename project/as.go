@@ -15,11 +15,13 @@ import (
 
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
-	ASN     int
-	IGP     string
-	Network Net
-	Routers []*Router
-	Links   []Link
+	ASN             int
+	IGP             string
+	RedistributeIGP bool
+	Network         Net
+	LoStart         net.IPNet
+	Routers         []*Router
+	Links           []Link
 }
 
 func (a *AutonomousSystem) getContainerName(n interface{}) string {
@@ -128,10 +130,18 @@ func (a *AutonomousSystem) linkRouters() {
 	for _, lnk := range a.Links {
 		first := lnk.First
 		second := lnk.Second
+		firstID := first.IP.IP.String()
+		secondID := second.IP.IP.String()
+		if len(a.Routers[first.RouterID-1].Loopback) > 0 {
+			firstID = a.Routers[first.RouterID-1].Loopback[0].IP.String()
+		}
+		if len(a.Routers[second.RouterID-1].Loopback) > 0 {
+			secondID = a.Routers[second.RouterID-1].Loopback[0].IP.String()
+		}
 
 		a.Routers[first.RouterID-1].Links =
 			append(a.Routers[first.RouterID-1].Links, first)
-		a.Routers[first.RouterID-1].Neighbors[second.IP.IP.String()] = BGPNbr{
+		a.Routers[first.RouterID-1].Neighbors[secondID] = BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -140,7 +150,7 @@ func (a *AutonomousSystem) linkRouters() {
 
 		a.Routers[second.RouterID-1].Links =
 			append(a.Routers[second.RouterID-1].Links, second)
-		a.Routers[second.RouterID-1].Neighbors[first.IP.IP.String()] = BGPNbr{
+		a.Routers[second.RouterID-1].Neighbors[firstID] = BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,

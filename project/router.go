@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"net"
 	"os/exec"
 	"sync"
 
@@ -17,12 +18,14 @@ type BGPNbr struct {
 	UpdateSource string
 	ConnCheck    bool
 	NextHopSelf  bool
+	IfName       string
 }
 
 type Router struct {
 	ID            int
 	Hostname      string
 	ContainerName string
+	Loopback      []net.IPNet
 	Links         []*NetInterface
 	Neighbors     map[string]BGPNbr
 	NextInterface int
@@ -47,6 +50,7 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 	if len(li) == 0 { // container does not exist yet
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image:           "topomate-router",
+			Hostname:        r.Hostname,
 			NetworkDisabled: true, // docker networking disabled as we use OVS
 		}, &container.HostConfig{
 			CapAdd: []string{"SYS_ADMIN", "NET_ADMIN"},

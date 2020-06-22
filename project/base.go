@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/internal/link"
 	"github.com/rahveiz/topomate/utils"
@@ -42,12 +43,36 @@ func ReadConfig(path string) *Project {
 	for _, k := range conf.AS {
 		// Copy informations
 		proj.AS[k.ASN] = &AutonomousSystem{
-			ASN:     k.ASN,
-			IGP:     k.IGP,
-			Routers: make([]*Router, k.NumRouters),
+			ASN:             k.ASN,
+			IGP:             k.IGP,
+			RedistributeIGP: k.RedistributeIGP,
+			Routers:         make([]*Router, k.NumRouters),
 		}
 
 		a := proj.AS[k.ASN]
+
+		// Parse network prefix
+		if k.Prefix != "" {
+
+			_, n, err := net.ParseCIDR(k.Prefix)
+			if err != nil {
+				utils.Fatalln(err)
+			}
+			a.Network = Net{
+				IPNet: n,
+			}
+		}
+
+		var loNet *net.IPNet
+		if k.LoRange != "" {
+			// Parse loopback network
+			_, n, err := net.ParseCIDR(k.LoRange)
+			if err != nil {
+				utils.Fatalln(err)
+			}
+			a.LoStart = *n
+			loNet = n
+		}
 
 		for i := 0; i < k.NumRouters; i++ {
 			host := "R" + strconv.Itoa(i+1)
@@ -58,19 +83,15 @@ func ReadConfig(path string) *Project {
 				NextInterface: 0,
 				Neighbors:     make(map[string]BGPNbr, k.NumRouters+nbAS),
 			}
+			if loNet != nil {
+				a.Routers[i].Loopback =
+					append(a.Routers[i].Loopback, *loNet)
+				loNet.IP = cidr.Inc(loNet.IP)
+			}
 		}
 
 		// Setup links
 		a.SetupLinks(k.Links)
-
-		// Parse network prefix
-		_, n, err := net.ParseCIDR(k.Prefix)
-		if err != nil {
-			utils.Fatalln(err)
-		}
-		a.Network = Net{
-			IPNet: n,
-		}
 
 		a.ReserveSubnets(k.Links.SubnetLength)
 		a.linkRouters()
@@ -176,17 +197,26 @@ func (p Project) RemoveExternal() {
 
 func (p *Project) linkExternal() {
 	for _, lnk := range p.Ext {
+		fromID := lnk.From.Interface.IP.IP.String()
+		toID := lnk.To.Interface.IP.IP.String()
+
+		if len(lnk.From.Router.Loopback) > 0 {
+			fromID = lnk.From.Router.Loopback[0].IP.String()
+		}
+		if len(lnk.To.Router.Loopback) > 0 {
+			toID = lnk.To.Router.Loopback[0].IP.String()
+		}
 
 		lnk.From.Interface.Description = fmt.Sprintf("linked to AS%d (%s)", lnk.To.ASN, lnk.To.Router.Hostname)
 		lnk.From.Router.Links =
 			append(lnk.From.Router.Links, lnk.From.Interface)
-		// lnk.From.Router.ExtLinks =
-		// 	append(lnk.From.Router.ExtLinks, NetInterfaceExt{ASN: lnk.To.ASN, Interface: lnk.To.Interface})
-		lnk.From.Router.Neighbors[lnk.To.Interface.IP.IP.String()] = BGPNbr{
+
+		lnk.From.Router.Neighbors[toID] = BGPNbr{
 			RemoteAS:     lnk.To.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  false,
+			IfName:       lnk.From.Interface.IfName,
 		}
 
 		lnk.To.Interface.Description = fmt.Sprintf("linked to AS%d (%s)", lnk.From.ASN, lnk.From.Router.Hostname)
@@ -194,11 +224,12 @@ func (p *Project) linkExternal() {
 			append(lnk.To.Router.Links, lnk.To.Interface)
 		// lnk.To.Router.ExtLinks =
 		// 	append(lnk.To.Router.ExtLinks, NetInterfaceExt{ASN: lnk.From.ASN, Interface: lnk.From.Interface})
-		lnk.To.Router.Neighbors[lnk.From.Interface.IP.IP.String()] = BGPNbr{
+		lnk.To.Router.Neighbors[fromID] = BGPNbr{
 			RemoteAS:     lnk.From.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  false,
+			IfName:       lnk.To.Interface.IfName,
 		}
 	}
 }

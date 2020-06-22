@@ -23,4 +23,10 @@ func (r RouteRedistribution) Write(w io.Writer, indent int) {
 	if r.Static {
 		writeWithIndent(w, indent, "redistribute static")
 	}
+	if r.OSPF {
+		writeWithIndent(w, indent, "redistribute ospf")
+	}
+	if r.ISIS {
+		writeWithIndent(w, indent, "redistribute isis")
+	}
 }

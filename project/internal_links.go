@@ -15,6 +15,7 @@ type NetInterface struct {
 	Description string
 	IP          net.IPNet
 	Speed       int
+	External    bool
 }
 
 type Link struct {

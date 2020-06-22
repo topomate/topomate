@@ -6,25 +6,30 @@ import (
 	"github.com/rahveiz/topomate/project"
 )
 
+type staticRoutes map[string][]string
+
 type FRRConfig struct {
-	Hostname   string
-	Interfaces map[string]IfConfig
-	BGP        BGPConfig
-	IGP        []interface{}
+	Hostname     string
+	Interfaces   map[string]IfConfig
+	BGP          BGPConfig
+	IGP          []interface{}
+	StaticRoutes map[string][]string
 }
 
 type IfConfig struct {
 	Description string
 	IPs         []net.IPNet
-	OSPF        []int
+	OSPF        int
 }
 
 type BGPNbr project.BGPNbr
 
 type BGPConfig struct {
-	ASN       int
-	Neighbors map[string]BGPNbr
-	Networks  []string
+	ASN          int
+	RouterID     string
+	Neighbors    map[string]BGPNbr
+	Networks     []string
+	Redistribute RouteRedistribution
 }
 
 type OSPFConfig struct {
