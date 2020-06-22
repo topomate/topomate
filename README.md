@@ -20,14 +20,18 @@ The following configuration :
 autonomous_systems:
   - asn: 10
     routers: 4
+    loopback_start: '172.16.10.1/32'
     igp: OSPF
+    redistribute_igp: true
     prefix: '192.168.8.0/26'
     links:
       kind: 'full-mesh'
       subnet_length: 30
   - asn: 20
     routers: 2
+    loopback_start: '172.16.20.1/32'
     igp: OSPF
+    redistribute_igp: true
     prefix: '10.10.10.0/28'
     links:
       kind: 'full-mesh'
@@ -50,48 +54,43 @@ For AS10-R1, the following configuration will be generated :
 ```
 frr version 7.3
 frr defaults traditional
-hostname R1
+hostname R2
 log syslog informational
 no ipv6 forwarding
 service integrated-vtysh-config
 !
 !
+interface lo
+ ip address 172.16.20.2/32
+ ip ospf area 0
+!
+!
 interface eth0
- description linked to R2
- ip address 192.168.8.1/30
+ description linked to R1
+ ip address 10.10.10.2/30
+ ip ospf area 0
 !
 !
 interface eth1
- description linked to R3
- ip address 192.168.8.5/30
+ description linked to AS10 (R1)
+ ip address 192.168.8.26/30
 !
 !
-interface eth2
- description linked to R4
- ip address 192.168.8.9/30
+ip route 172.16.10.1/32 eth1
 !
 !
-interface eth3
- description linked to AS20 (R2)
- ip address 192.168.8.25/30
-!
-!
-router bgp 10
- neighbor 192.168.8.2 remote-as 10
- neighbor 192.168.8.2 update-source lo
- neighbor 192.168.8.2 disable-connected-check
- neighbor 192.168.8.6 remote-as 10
- neighbor 192.168.8.6 update-source lo
- neighbor 192.168.8.6 disable-connected-check
- neighbor 192.168.8.10 remote-as 10
- neighbor 192.168.8.10 update-source lo
- neighbor 192.168.8.10 disable-connected-check
- neighbor 192.168.8.26 remote-as 20
- neighbor 192.168.8.26 update-source lo
- neighbor 192.168.8.26 disable-connected-check
+router bgp 20
+ bgp router-id 172.16.20.2
+ neighbor 172.16.20.1 remote-as 20
+ neighbor 172.16.20.1 update-source lo
+ neighbor 172.16.20.1 disable-connected-check
+ neighbor 172.16.10.1 remote-as 10
+ neighbor 172.16.10.1 update-source lo
+ neighbor 172.16.10.1 disable-connected-check
  !
  address-family ipv4 unicast
-  network 192.168.8.0/26
+  redistribute ospf
+  network 10.10.10.0/28
  exit-address-family
 !
 !
