@@ -6,18 +6,22 @@ autonomous_systems:
     igp: OSPF
     redistribute_igp: true
     prefix: '192.168.8.0/26'
+    # prefix: '2001:db8:1234::0/64'
     links:
       kind: 'full-mesh'
       subnet_length: 30
+      # subnet_length: 126
   - asn: 20
     routers: 2
     loopback_start: '172.16.20.1/32'
     igp: OSPF
     redistribute_igp: true
     prefix: '10.10.10.0/28'
+    # prefix: '2001:db8:abcd::0/64'
     links:
       kind: 'full-mesh'
-      subnet_length: 30  
+      subnet_length: 30
+      # subnet_length: 126
   
 external_links:
   - from:

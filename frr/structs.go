@@ -20,6 +20,9 @@ type IfConfig struct {
 	Description string
 	IPs         []net.IPNet
 	OSPF        int
+	OSPF6       int
+	Speed       int
+	External    bool
 }
 
 type BGPNbr project.BGPNbr
@@ -29,11 +32,16 @@ type BGPConfig struct {
 	RouterID     string
 	Neighbors    map[string]BGPNbr
 	Networks     []string
+	Networks6    []string
 	Redistribute RouteRedistribution
 }
 
 type OSPFConfig struct {
 	ProcessID    int
+	Redistribute RouteRedistribution
+}
+
+type OSPF6Config struct {
 	Redistribute RouteRedistribution
 }
 

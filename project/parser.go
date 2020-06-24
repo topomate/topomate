@@ -7,6 +7,8 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+// SetupManual generates an internal links configuration based on the provided
+// informations
 func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 	links := make([]Link, len(lm.Specs))
 	for idx, v := range lm.Specs {
@@ -31,6 +33,7 @@ func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 	return links
 }
 
+// SetupRing generates an internal links configuration using a ring topology
 func (a AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 	nbRouters := len(a.Routers)
 	if nbRouters < 3 {
@@ -50,6 +53,7 @@ func (a AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 	return links
 }
 
+// SetupRing generates an internal links configuration using a full-mesh topology
 func (a AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
 	nbRouters := len(a.Routers)
 	if nbRouters < 2 {

@@ -90,13 +90,14 @@ func (a *AutonomousSystem) RemoveLinks() {
 	}
 }
 
+// ReserveSubnets generates IPv4 addressing for internal links in an AS
 func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 	if prefixLen == 0 { // do not set subnets
 		return
 	}
 	m, _ := a.Network.IPNet.Mask.Size()
 	if prefixLen <= m {
-		utils.Fatalf("AS%d subnets reservation error: prefixlen too large", a.ASN)
+		utils.Fatalf("AS%d subnets reservation error: prefixlen too large (%d)\n", a.ASN, prefixLen)
 	}
 
 	n, _ := cidr.Subnet(a.Network.IPNet, prefixLen-m, 0)
@@ -145,7 +146,7 @@ func (a *AutonomousSystem) linkRouters() {
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
-			NextHopSelf:  false,
+			NextHopSelf:  true,
 		}
 
 		a.Routers[second.RouterID-1].Links =
@@ -154,7 +155,7 @@ func (a *AutonomousSystem) linkRouters() {
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
-			NextHopSelf:  false,
+			NextHopSelf:  true,
 		}
 	}
 }

@@ -124,6 +124,8 @@ func (p *Project) Print() {
 	// }
 }
 
+// StartAll starts all containers (creates them before if needed) with the configurations
+// present the configuration directory, and apply links
 func (p *Project) StartAll() {
 	var wg sync.WaitGroup
 	for asn, v := range p.AS {

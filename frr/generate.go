@@ -16,6 +16,8 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 	idx := 0
 	for i, as := range p.AS {
 		n := len(as.Routers)
+		is4 := as.Network.IPNet.IP.To4() != nil
+
 		configs[idx] = make([]FRRConfig, n)
 		for j, r := range as.Routers {
 			c := FRRConfig{
@@ -40,7 +42,12 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 			c.BGP = BGPConfig{
 				ASN:       i,
 				Neighbors: make(map[string]BGPNbr, n),
-				Networks:  []string{as.Network.IPNet.String()},
+			}
+
+			if is4 {
+				c.BGP.Networks = []string{as.Network.IPNet.String()}
+			} else {
+				c.BGP.Networks6 = []string{as.Network.IPNet.String()}
 			}
 
 			if len(r.Loopback) > 0 {
@@ -59,7 +66,12 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 			igp := strings.ToUpper(as.IGP)
 			switch igp {
 			case "OSPF":
-				c.IGP = append(c.IGP, getOSPFConfig(*as))
+				// Check if we need to setup OSPFv2 or OSPFv3
+				if is4 {
+					c.IGP = append(c.IGP, getOSPFConfig(*as))
+				} else {
+					c.IGP = append(c.IGP, getOSPF6Config(*as))
+				}
 				if as.RedistributeIGP {
 					c.BGP.Redistribute.OSPF = true
 				}
@@ -74,9 +86,15 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 					IPs:         []net.IPNet{iface.IP},
 					Description: iface.Description,
 					OSPF:        -1,
+					Speed:       iface.Speed,
+					External:    iface.External,
 				}
 				if igp == "OSPF" && !iface.External {
-					ifCfg.OSPF = 0
+					if is4 {
+						ifCfg.OSPF = 0
+					} else {
+						ifCfg.OSPF6 = 0
+					}
 				}
 				c.Interfaces[iface.IfName] = ifCfg
 			}
@@ -130,6 +148,7 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 		}
 	}
 	fmt.Fprintln(dst, " exit-address-family")
+
 	sep(dst)
 }
 
@@ -140,6 +159,22 @@ func writeOSPF(dst io.Writer, c OSPFConfig) {
 		fmt.Fprintln(dst, "router ospf", c.ProcessID)
 	} else {
 		fmt.Fprintln(dst, "router ospf")
+	}
+
+	c.Redistribute.Write(dst, 1)
+
+	sep(dst)
+}
+
+func writeOSPF6(dst io.Writer, c OSPF6Config, ifs map[string]IfConfig) {
+	sep(dst)
+
+	// multi-instance OSPFv3 is not supported yet on FRRouting
+	fmt.Fprintln(dst, "router ospf6")
+	for n, i := range ifs {
+		if i.OSPF6 != -1 {
+			fmt.Fprintln(dst, " interface", n, "area 0")
+		}
 	}
 
 	c.Redistribute.Write(dst, 1)
@@ -160,6 +195,9 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 	if c.OSPF != -1 {
 		fmt.Fprintln(dst, " ip ospf area", c.OSPF)
 	}
+	if c.Speed > 0 {
+		fmt.Fprintln(dst, " bandwidth", c.Speed)
+	}
 
 	sep(dst)
 }
@@ -179,7 +217,6 @@ func WriteConfig(c FRRConfig) {
 frr defaults traditional
 hostname %s
 log syslog informational
-no ipv6 forwarding
 service integrated-vtysh-config
 `, c.Hostname)
 	sep(dst)
@@ -196,6 +233,9 @@ service integrated-vtysh-config
 		switch igp.(type) {
 		case OSPFConfig:
 			writeOSPF(dst, igp.(OSPFConfig))
+			break
+		case OSPF6Config:
+			writeOSPF6(dst, igp.(OSPF6Config), c.internalIfs())
 			break
 		default:
 			break
@@ -221,6 +261,15 @@ func WriteAll(configs [][]FRRConfig) {
 func getOSPFConfig(as project.AutonomousSystem) OSPFConfig {
 	cfg := OSPFConfig{
 		ProcessID: 0,
+		Redistribute: RouteRedistribution{
+			Connected: true,
+		},
+	}
+	return cfg
+}
+
+func getOSPF6Config(as project.AutonomousSystem) OSPF6Config {
+	cfg := OSPF6Config{
 		Redistribute: RouteRedistribution{
 			Connected: true,
 		},

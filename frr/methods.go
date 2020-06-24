@@ -30,3 +30,23 @@ func (r RouteRedistribution) Write(w io.Writer, indent int) {
 		writeWithIndent(w, indent, "redistribute isis")
 	}
 }
+
+func (c *FRRConfig) internalIfs() map[string]IfConfig {
+	res := make(map[string]IfConfig, len(c.Interfaces))
+	for n, i := range c.Interfaces {
+		if !i.External {
+			res[n] = i
+		}
+	}
+	return res
+}
+
+func (c *FRRConfig) externalIfs() map[string]IfConfig {
+	res := make(map[string]IfConfig, len(c.Interfaces))
+	for n, i := range c.Interfaces {
+		if i.External {
+			res[n] = i
+		}
+	}
+	return res
+}
