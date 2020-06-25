@@ -39,10 +39,12 @@ type BGPConfig struct {
 type OSPFConfig struct {
 	ProcessID    int
 	Redistribute RouteRedistribution
+	RouterID     string
 }
 
 type OSPF6Config struct {
 	Redistribute RouteRedistribution
+	RouterID     string
 }
 
 type RouteRedistribution struct {

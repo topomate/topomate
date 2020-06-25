@@ -99,3 +99,13 @@ router ospf
 !
 line vty
 ```
+
+
+## Notes converning MPLS
+
+If you want to use MPLS, the following kernel modules must be enabled on the host machine
+
+```
+mpls_router
+mpls_iptunne
+```

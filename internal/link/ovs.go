@@ -56,14 +56,14 @@ func AddPortToContainer(brName, ifName, containerName string) {
 		containerName,
 	).CombinedOutput()
 	if err != nil {
-		fmt.Println(out)
+		fmt.Println(string(out))
 		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
 }
 
 // DelPortFromContainer removes an OVS port from a container
 func DelPortFromContainer(brName, ifName, containerName string) {
-	_, err := utils.ExecSudo(
+	out, err := utils.ExecSudo(
 		"ovs-docker",
 		"del-port",
 		brName,
@@ -71,19 +71,21 @@ func DelPortFromContainer(brName, ifName, containerName string) {
 		containerName,
 	).CombinedOutput()
 	if err != nil {
+		fmt.Println(string(out))
 		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
 }
 
 // ClearPortsFromContainer removes all OVS ports from a container
 func ClearPortsFromContainer(brName, containerName string) {
-	_, err := utils.ExecSudo(
+	out, err := utils.ExecSudo(
 		"ovs-docker",
 		"del-ports",
 		brName,
 		containerName,
 	).CombinedOutput()
 	if err != nil {
+		fmt.Println(string(out))
 		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
 }

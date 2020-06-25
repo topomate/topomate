@@ -50,7 +50,7 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				c.BGP.Networks6 = []string{as.Network.IPNet.String()}
 			}
 
-			if len(r.Loopback) > 0 {
+			if nbLo > 0 {
 				c.BGP.RouterID = r.Loopback[0].IP.String()
 			}
 
@@ -68,9 +68,9 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 			case "OSPF":
 				// Check if we need to setup OSPFv2 or OSPFv3
 				if is4 {
-					c.IGP = append(c.IGP, getOSPFConfig(*as))
+					c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID))
 				} else {
-					c.IGP = append(c.IGP, getOSPF6Config(*as))
+					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 				}
 				if as.RedistributeIGP {
 					c.BGP.Redistribute.OSPF = true
@@ -160,6 +160,9 @@ func writeOSPF(dst io.Writer, c OSPFConfig) {
 	} else {
 		fmt.Fprintln(dst, "router ospf")
 	}
+	if c.RouterID != "" {
+		fmt.Fprintln(dst, " ospf router-id", c.RouterID)
+	}
 
 	c.Redistribute.Write(dst, 1)
 
@@ -175,6 +178,9 @@ func writeOSPF6(dst io.Writer, c OSPF6Config, ifs map[string]IfConfig) {
 		if i.OSPF6 != -1 {
 			fmt.Fprintln(dst, " interface", n, "area 0")
 		}
+	}
+	if c.RouterID != "" {
+		fmt.Fprintln(dst, " ospf6 router-id", c.RouterID)
 	}
 
 	c.Redistribute.Write(dst, 1)
@@ -198,6 +204,22 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 	if c.Speed > 0 {
 		fmt.Fprintln(dst, " bandwidth", c.Speed)
 	}
+
+	sep(dst)
+}
+
+func (c *FRRConfig) writeMPLS(dst io.Writer) {
+	sep(dst)
+
+	fmt.Fprintln(dst, "mpls ldp")
+	fmt.Fprintln(dst, " router-id", c.BGP.RouterID)
+
+	fmt.Fprintln(dst, " address-family ipv4")
+	fmt.Fprintln(dst, "  discovery transport-address", c.BGP.RouterID)
+	for ifname := range c.Interfaces {
+		fmt.Fprintln(dst, "  interface", ifname)
+	}
+	fmt.Fprintln(dst, " exit-address-family")
 
 	sep(dst)
 }
@@ -242,6 +264,8 @@ service integrated-vtysh-config
 		}
 	}
 
+	c.writeMPLS(dst)
+
 	fmt.Fprintln(dst, "line vty")
 
 	file.WriteString(dst.String())
@@ -258,21 +282,23 @@ func WriteAll(configs [][]FRRConfig) {
 
 /* OSPF CONFIGURATION */
 
-func getOSPFConfig(as project.AutonomousSystem) OSPFConfig {
+func getOSPFConfig(routerID string) OSPFConfig {
 	cfg := OSPFConfig{
 		ProcessID: 0,
 		Redistribute: RouteRedistribution{
 			Connected: true,
 		},
+		RouterID: routerID,
 	}
 	return cfg
 }
 
-func getOSPF6Config(as project.AutonomousSystem) OSPF6Config {
+func getOSPF6Config(routerID string) OSPF6Config {
 	cfg := OSPF6Config{
 		Redistribute: RouteRedistribution{
 			Connected: true,
 		},
+		RouterID: routerID,
 	}
 	return cfg
 }
