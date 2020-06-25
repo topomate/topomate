@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
@@ -29,6 +30,18 @@ func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 		l.First.Description = fmt.Sprintf("linked to %s", s.Hostname)
 		l.Second.Description = fmt.Sprintf("linked to %s", f.Hostname)
 		links[idx] = l
+	}
+
+	// if a preset is present
+	switch strings.ToLower(lm.Preset) {
+	case "ring":
+		links = append(links, a.SetupRing(lm)...)
+		break
+	case "full-mesh":
+		links = append(links, a.SetupFullMesh(lm)...)
+		break
+	default:
+		break
 	}
 	return links
 }
