@@ -147,8 +147,8 @@ add_port () {
     ip netns exec "$PID" ip link set dev "${PORTNAME}_c" name "$INTERFACE"
     ip netns exec "$PID" ip link set "$INTERFACE" up
     # Enable MPLS
-    ip netns exec "$PID" sysctl -w net.mpls.conf.${INTERFACE}.input=1 
-    ip netns exec "$PID" sysctl -w net.mpls.platform_labels=65535
+    # ip netns exec "$PID" sysctl -w net.mpls.conf.${INTERFACE}.input=1 
+    # ip netns exec "$PID" sysctl -w net.mpls.platform_labels=65535
 
     if [ -n "$MTU" ]; then
         ip netns exec "$PID" ip link set dev "$INTERFACE" mtu "$MTU"

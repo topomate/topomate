@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/digitalocean/go-openvswitch/ovs"
+	"github.com/rahveiz/topomate/internal/ovsdocker"
 	"github.com/rahveiz/topomate/utils"
 )
 
@@ -18,25 +19,6 @@ func CreateBridge(name string) {
 
 }
 
-// func CreateBridgeWithIp(name, prefix string) {
-// 	CreateBridge(name)
-
-// 	br, err := netlink.LinkByName(name)
-// 	if err != nil {
-// 		log.Fatalf("failed to add address to %s: %v", name, err)
-// 	}
-
-// 	addr, err := netlink.ParseAddr(prefix)
-// 	if err != nil {
-// 		log.Fatalf("failed to parse addr %s: %v", prefix, err)
-// 	}
-
-// 	if err := netlink.AddrAdd(br, addr); err != nil {
-// 		log.Fatalf("failed to add addr: %v", err)
-// 	}
-
-// }
-
 func DeleteBridge(name string) {
 	c := ovs.New(ovs.Sudo())
 
@@ -48,16 +30,9 @@ func DeleteBridge(name string) {
 // AddPortToContainer links a container to an OVS bridge using
 // the ovs-docker script
 func AddPortToContainer(brName, ifName, containerName string) {
-	out, err := utils.ExecSudo(
-		"ovs-docker",
-		"add-port",
-		brName,
-		ifName,
-		containerName,
-	).CombinedOutput()
-	if err != nil {
-		fmt.Println(string(out))
-		log.Fatalf("error using ovs-docker: %s\n", err)
+	c := ovsdocker.New(containerName)
+	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams()); err != nil {
+		utils.Fatalln(err)
 	}
 }
 
