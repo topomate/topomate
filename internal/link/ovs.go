@@ -1,6 +1,7 @@
 package link
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 
@@ -27,8 +28,7 @@ func DeleteBridge(name string) {
 	}
 }
 
-// AddPortToContainer links a container to an OVS bridge using
-// the ovs-docker script
+// AddPortToContainer links a container to an OVS bridge
 func AddPortToContainer(brName, ifName, containerName string) {
 	c := ovsdocker.New(containerName)
 	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams()); err != nil {
@@ -63,4 +63,32 @@ func ClearPortsFromContainer(brName, containerName string) {
 		fmt.Println(string(out))
 		log.Fatalf("error using ovs-docker: %s\n", err)
 	}
+}
+
+func AddFlow(brName, containerA, ifA, containerB, ifB string) {
+	portA, _ := ovsdocker.GetOFPort(containerA, ifA)
+	portB, _ := ovsdocker.GetOFPort(containerB, ifB)
+	var stderr bytes.Buffer
+	cmd := utils.ExecSudo(
+		"ovs-ofctl",
+		"add-flow", brName,
+		"in_port="+portA+",actions=output:"+portB,
+	)
+	cmd.Stderr = &stderr
+	fmt.Println(cmd.String())
+	err := cmd.Run()
+	if err != nil {
+		utils.Fatalln("AddFlow:", string(stderr.Bytes()), err)
+	}
+	cmd = utils.ExecSudo(
+		"ovs-ofctl",
+		"add-flow", brName,
+		"in_port="+portB+",actions=output:"+portA,
+	)
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		utils.Fatalln("AddFlow:", string(stderr.Bytes()), err)
+	}
+
 }

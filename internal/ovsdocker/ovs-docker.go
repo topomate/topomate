@@ -49,9 +49,9 @@ func (c *OVSDockerClient) createNetNSLink() {
 	cmd := utils.ExecSudo("mkdir", "-p", "/var/run/netns")
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 	// stderr.Reset()
 	if err != nil {
+		fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 		utils.Fatalln("createNetNS:", err)
 	}
 
@@ -61,8 +61,8 @@ func (c *OVSDockerClient) createNetNSLink() {
 			cmd = utils.ExecSudo("ln", "-s", c.procPath, c.varPath)
 			cmd.Stderr = &stderr
 			_err := cmd.Run()
-			fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 			if _err != nil {
+				fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 				utils.Fatalln("createNetNS:", err)
 			}
 		} else {
@@ -76,9 +76,9 @@ func (c *OVSDockerClient) deleteNetNSLink() {
 	cmd := utils.ExecSudo("rm", "-f", c.varPath)
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 	// stderr.Reset()
 	if err != nil {
+		fmt.Fprintln(os.Stderr, string(stderr.Bytes()))
 		utils.Fatalln("deleteNetNS:", err)
 	}
 }
@@ -93,6 +93,22 @@ func (c *OVSDockerClient) PortExists(ifName string) bool {
 		utils.Fatalln("PortExists: ", err)
 	}
 	return stdout.Len() > 0
+}
+
+// FindPort checks if an interface ifName exists within the container,
+// and returns the corresponding interface on the host side
+func (c *OVSDockerClient) FindPort(ifName string) (string, bool) {
+	var stdout bytes.Buffer
+	cmd := findInterface(c.ContainerName, ifName)
+	cmd.Stdout = &stdout
+	err := cmd.Run()
+	if err != nil {
+		utils.Fatalln("FindPort: ", err)
+	}
+	if stdout.Len() > 0 {
+		return strings.TrimSuffix(string(stdout.Bytes()), "\n"), true
+	}
+	return "", false
 }
 
 // New returns an OVSDockerClient based on the container name.
@@ -142,9 +158,37 @@ func findInterface(containerName, ifName string) *exec.Cmd {
 	)
 }
 
+func GetOFPort(containerName, ifName string) (string, bool) {
+	var stdout, stderr bytes.Buffer
+	cmd := findInterface(containerName, ifName)
+	cmd.Stdout = &stdout
+	err := cmd.Run()
+	if err != nil {
+		utils.Fatalln("GetOFPort: ", err)
+	}
+	if stdout.Len() == 0 {
+		return "", false
+	}
+	ifID := strings.TrimSuffix(string(stdout.Bytes()), "\n")
+	stdout.Reset()
+	cmd = utils.ExecSudo(
+		"ovs-vsctl",
+		"get", "Interface",
+		ifID, "ofport",
+	)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		utils.Fatalln("GetOFPort:", string(stderr.Bytes()), err)
+	}
+	return strings.TrimSuffix(string(stdout.Bytes()), "\n"), true
+
+}
+
 // AddPort adds a port to the container, and links it with an OVS bridge
 func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings) error {
-	if c.PortExists(ifName) {
+	if _, ok := c.FindPort(ifName); ok {
 		return fmt.Errorf("AddPort: interface %s already exists in container %s", ifName, c.ContainerName)
 	}
 
@@ -196,6 +240,22 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings) 
 	return nil
 }
 
+// DeletePort deletes a port from a container
+func (c *OVSDockerClient) DeletePort(ifName string) {
+	port, ok := c.FindPort(ifName)
+	if !ok {
+		return
+	}
+	err := utils.ExecSudo("ovs-vsctl", "if-exists", "del-port", port).Run()
+	if err != nil {
+		utils.Fatalln("DeletePort:", err)
+	}
+
+	if err := c.ExecLink("delete", port); err != nil {
+		utils.Fatalln(err)
+	}
+}
+
 // ExecNS is a wrapper around the "ip netns exec <PID>" command (with PID auto-filled)
 func (c *OVSDockerClient) ExecNS(args ...string) error {
 	var stderr bytes.Buffer
@@ -236,7 +296,7 @@ func (c *OVSDockerClient) addToBridge(brName, ifName string, speed int) error {
 		"--may-exist", "add-port", brName, host, "--",
 		"set", "interface", host,
 		"external_ids:container_id=" + c.ContainerName,
-		"external_ids:container_iface=" + host,
+		"external_ids:container_iface=" + ifName,
 		"ingress_policing_rate=" + strconv.Itoa(speed*1000),
 	}
 	cmd := utils.ExecSudo(cmdArgs...)

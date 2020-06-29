@@ -75,19 +75,25 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 
 // ApplyLinks applies the internal L2 configuration using OVS
 func (a *AutonomousSystem) ApplyLinks() {
+	brName := fmt.Sprintf("int-%d", a.ASN)
+	link.CreateBridge(brName)
 	for _, v := range a.Links {
-		brName := v.BrName(a.ASN)
-		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, v.First.IfName, a.getContainerName(v.First.RouterID))
-		link.AddPortToContainer(brName, v.Second.IfName, a.getContainerName(v.Second.RouterID))
+		idA := a.getContainerName(v.First.RouterID)
+		idB := a.getContainerName(v.Second.RouterID)
+		ifA := v.First.IfName
+		ifB := v.Second.IfName
+		link.AddPortToContainer(brName, ifA, idA)
+		link.AddPortToContainer(brName, ifB, idB)
+		link.AddFlow(brName, idA, ifA, idB, ifB)
 	}
 }
 
 // RemoveLinks removes the internal L2 configuration of an AS
 func (a *AutonomousSystem) RemoveLinks() {
-	for _, v := range a.Links {
-		link.DeleteBridge(v.BrName(a.ASN))
-	}
+	link.DeleteBridge(fmt.Sprintf("int-%d", a.ASN))
+	// for _, v := range a.Links {
+	// 	link.DeleteBridge(v.BrName(a.ASN))
+	// }
 }
 
 // ReserveSubnets generates IPv4 addressing for internal links in an AS
