@@ -28,10 +28,13 @@ func DeleteBridge(name string) {
 	}
 }
 
-// AddPortToContainer links a container to an OVS bridge
-func AddPortToContainer(brName, ifName, containerName string, bulk ovsdocker.OVSBulk) {
+// AddPortToContainer links a container to an OVS bridge, creating an interface on the container network namespace
+// using a veth pair.
+// If bulk is provided, it fills it with the settings of the host part of the veth.
+// If bulk is nil, it adds the host part of the veth to the OVS bridge.
+func AddPortToContainer(brName, ifName, containerName string, hostIf *ovsdocker.OVSInterface) {
 	c := ovsdocker.New(containerName)
-	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams(), bulk); err != nil {
+	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams(), hostIf); err != nil {
 		utils.Fatalln("AddPort:", err)
 	}
 }

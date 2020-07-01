@@ -5,11 +5,13 @@ import (
 	"io/ioutil"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/internal/link"
+	"github.com/rahveiz/topomate/internal/ovsdocker"
 	"github.com/rahveiz/topomate/utils"
 
 	"gopkg.in/yaml.v2"
@@ -149,7 +151,7 @@ func (p *Project) Print() {
 
 // StartAll starts all containers (creates them before if needed) with the configurations
 // present the configuration directory, and apply links
-func (p *Project) StartAll() {
+func (p *Project) StartAll(linksFlag string) {
 	var wg sync.WaitGroup
 	for asn, v := range p.AS {
 		wg.Add(len(v.Routers))
@@ -168,10 +170,21 @@ func (p *Project) StartAll() {
 		}
 	}
 	wg.Wait()
-	for _, v := range p.AS {
-		v.ApplyLinks()
+
+	switch strings.ToLower(linksFlag) {
+	case "internal":
+		p.ApplyInternalLinks()
+		break
+	case "external":
+		p.ApplyExternalLinks()
+		break
+	case "none":
+		break
+	default:
+		p.ApplyInternalLinks()
+		p.ApplyExternalLinks()
+		break
 	}
-	p.ApplyExternal()
 }
 
 func (p *Project) StopAll() {
@@ -186,14 +199,74 @@ func (p *Project) StopAll() {
 		}
 	}
 	wg.Wait()
-	for _, v := range p.AS {
-		v.RemoveLinks()
-	}
-	p.RemoveExternal()
+	p.RemoveInternalLinks()
+	p.RemoveExternalLinks()
 }
 
-func (p Project) ApplyExternal() {
+func setupContainerLinks(brName string, links []Link) []ovsdocker.OVSInterface {
+
+	// Create an OVS bridge
+	link.CreateBridge(brName)
+
+	// Prepare a slice for bulk add to the OVS bridge (better performances)
+	res := make([]ovsdocker.OVSInterface, 0, len(links))
+
+	for _, v := range links {
+		idA := v.First.Router.ContainerName
+		idB := v.Second.Router.ContainerName
+		ifA := v.First.Interface.IfName
+		ifB := v.Second.Interface.IfName
+
+		hostIf := ovsdocker.OVSInterface{}
+		link.AddPortToContainer(brName, ifA, idA, &hostIf)
+		res = append(res, hostIf)
+		link.AddPortToContainer(brName, ifB, idB, &hostIf)
+		res = append(res, hostIf)
+	}
+	return res
+}
+
+func applyFlow(brName string, links []Link) {
+	for _, v := range links {
+		idA := v.First.Router.ContainerName
+		idB := v.Second.Router.ContainerName
+		ifA := v.First.Interface.IfName
+		ifB := v.Second.Interface.IfName
+		link.AddFlow(brName, idA, ifA, idB, ifB)
+	}
+}
+
+func (p *Project) ApplyInternalLinks() {
+
+	// Create a map for bulk add to OVS bridge
+	bulk := make(ovsdocker.OVSBulk, len(p.AS))
+
+	for n, as := range p.AS {
+		// Create bridge with name "int-<ASN>"
+		brName := fmt.Sprintf("int-%d", n)
+		// Setup container links
+		bulk[brName] = setupContainerLinks(brName, as.Links)
+	}
+
+	// Link host interfaces to OVS bridges
+	ovsdocker.AddToBridgeBulk(bulk)
+
+	// Apply OpenFlow rules to the bridges
+	for n, as := range p.AS {
+		brName := fmt.Sprintf("int-%d", n)
+		applyFlow(brName, as.Links)
+	}
+}
+
+func (p *Project) RemoveInternalLinks() {
+	for n := range p.AS {
+		link.DeleteBridge(fmt.Sprintf("int-%d", n))
+	}
+}
+
+func (p *Project) ApplyExternalLinks() {
 	for _, v := range p.Ext {
+
 		brName := fmt.Sprintf("ext-%d%s-%d%s",
 			v.From.ASN,
 			v.From.Router.Hostname,
@@ -202,12 +275,13 @@ func (p Project) ApplyExternal() {
 		)
 
 		link.CreateBridge(brName)
+
 		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, nil)
 		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, nil)
 	}
 }
 
-func (p Project) RemoveExternal() {
+func (p *Project) RemoveExternalLinks() {
 	for _, v := range p.Ext {
 		brName := fmt.Sprintf("ext-%d%s-%d%s",
 			v.From.ASN,

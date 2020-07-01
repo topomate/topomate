@@ -6,12 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rahveiz/topomate/internal/ovsdocker"
-
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/rahveiz/topomate/config"
-	"github.com/rahveiz/topomate/internal/link"
 	"github.com/rahveiz/topomate/utils"
 )
 
@@ -74,42 +71,6 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 	default:
 		fmt.Println("Not implemented")
 	}
-}
-
-// ApplyLinks applies the internal L2 configuration using OVS
-func (a *AutonomousSystem) ApplyLinks() {
-	brName := fmt.Sprintf("int-%d", a.ASN)
-	link.CreateBridge(brName)
-	bulk := make(ovsdocker.OVSBulk, len(a.Links))
-	bulk[brName] = make([]ovsdocker.OVSInterface, 0, len(a.Links))
-	for _, v := range a.Links {
-		idA := v.First.Router.ContainerName
-		idB := v.Second.Router.ContainerName
-		ifA := v.First.Interface.IfName
-		ifB := v.Second.Interface.IfName
-		link.AddPortToContainer(brName, ifA, idA, bulk)
-		link.AddPortToContainer(brName, ifB, idB, bulk)
-	}
-
-	if err := ovsdocker.AddToBridgeBulk(bulk); err != nil {
-		utils.Fatalln(err)
-	}
-
-	for _, v := range a.Links {
-		idA := v.First.Router.ContainerName
-		idB := v.Second.Router.ContainerName
-		ifA := v.First.Interface.IfName
-		ifB := v.Second.Interface.IfName
-		link.AddFlow(brName, idA, ifA, idB, ifB)
-	}
-}
-
-// RemoveLinks removes the internal L2 configuration of an AS
-func (a *AutonomousSystem) RemoveLinks() {
-	link.DeleteBridge(fmt.Sprintf("int-%d", a.ASN))
-	// for _, v := range a.Links {
-	// 	link.DeleteBridge(v.BrName(a.ASN))
-	// }
 }
 
 // ReserveSubnets generates IPv4 addressing for internal links in an AS

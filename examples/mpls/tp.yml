@@ -1,0 +1,22 @@
+name: "foobar"
+autonomous_systems:
+  - asn: 420
+    # routers: 8
+    routers: 3
+    loopback_start: '10.1.1.1/32'
+    igp: OSPF
+    redistribute_igp: true
+    prefix: '172.18.10.0/24'
+    links:
+      kind: 'manual'
+      subnet_length: 30
+      # preset: 'ring'
+      specs:
+        # - first: 2
+        #   second: 6
+        # - first: 3
+        #   second: 7
+        - first: 1
+          second: 2
+        - first: 2
+          second: 3

@@ -18,6 +18,7 @@ package cmd
 import (
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/frr"
+	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -36,8 +37,11 @@ to quickly create a Cobra application.`,
 
 		foo := frr.GenerateConfig(newConf)
 		frr.WriteAll(foo)
-
-		newConf.StartAll()
+		links, err := cmd.Flags().GetString("links")
+		if err != nil {
+			utils.Fatalln(err)
+		}
+		newConf.StartAll(links)
 	},
 }
 
@@ -45,6 +49,7 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.Flags().StringP("project", "p", "", "Project name")
 	startCmd.Flags().IntSliceVar(&config.ASOnly, "as", nil, "Start only specified AS")
+	startCmd.Flags().String("links", "all", `Restrict which links should be applied (all, internal, external, none). Defaults to all.`)
 
 	// Here you will define your flags and configuration settings.
 

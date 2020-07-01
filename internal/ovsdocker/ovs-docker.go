@@ -13,6 +13,7 @@ import (
 	"github.com/docker/distribution/uuid"
 
 	"github.com/docker/docker/client"
+	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 )
 
@@ -196,7 +197,7 @@ func GetOFPort(containerName, ifName string) (string, bool) {
 }
 
 // AddPort adds a port to the container, and links it with an OVS bridge
-func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, bulk OVSBulk) error {
+func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, hostIf *OVSInterface) error {
 	if _, ok := c.FindPort(ifName); ok {
 		return fmt.Errorf("AddPort: interface %s already exists in container %s", ifName, c.ContainerName)
 	}
@@ -211,18 +212,18 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 
 	portHost, portCont := c.IfNames()
 
-	if bulk == nil {
+	if hostIf == nil {
 		// Add the host end of the veth to an OVS bridge
 		if err := c.addToBridge(brName, ifName, settings.Speed); err != nil {
 			return err
 		}
 	} else {
-		bulk[brName] = append(bulk[brName], OVSInterface{
+		*hostIf = OVSInterface{
 			HostIface:      portHost,
 			ContainerIface: ifName,
 			ContainerName:  c.ContainerName,
 			IngressRate:    strconv.Itoa(settings.Speed * 1000),
-		})
+		}
 	}
 
 	// Activate host side
@@ -281,6 +282,9 @@ func (c *OVSDockerClient) ExecNS(args ...string) error {
 	cmdArgs = append(cmdArgs, args...)
 	cmd := utils.ExecSudo(cmdArgs...)
 	cmd.Stderr = &stderr
+	if config.VFlag {
+		fmt.Println(cmd.String())
+	}
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("ExecNS: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
@@ -295,6 +299,9 @@ func (c *OVSDockerClient) ExecLink(args ...string) error {
 	cmdArgs = append(cmdArgs, args...)
 	cmd := utils.ExecSudo(cmdArgs...)
 	cmd.Stderr = &stderr
+	if config.VFlag {
+		fmt.Println(cmd.String())
+	}
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("ExecLink: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
