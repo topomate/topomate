@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/frr"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +44,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.Flags().StringP("project", "p", "", "Project name")
+	startCmd.Flags().IntSliceVar(&config.ASOnly, "as", nil, "Start only specified AS")
 
 	// Here you will define your flags and configuration settings.
 

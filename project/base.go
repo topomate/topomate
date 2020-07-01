@@ -25,6 +25,9 @@ type Project struct {
 // ReadConfig reads a yaml file, parses it and returns a Project
 func ReadConfig(path string) *Project {
 	conf := &config.BaseConfig{}
+	if config.VFlag {
+		fmt.Println("Reading configuration file:", path)
+	}
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatalln(err)
@@ -47,6 +50,9 @@ func ReadConfig(path string) *Project {
 			IGP:             k.IGP,
 			RedistributeIGP: k.RedistributeIGP,
 			Routers:         make([]*Router, k.NumRouters),
+		}
+		if config.VFlag {
+			fmt.Printf("Generating %d routers for AS %d.\n", k.NumRouters, k.ASN)
 		}
 
 		a := proj.AS[k.ASN]
