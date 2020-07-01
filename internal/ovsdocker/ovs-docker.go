@@ -32,6 +32,15 @@ type OVSDockerClient struct {
 	procPath      string
 }
 
+type OVSInterface struct {
+	HostIface      string
+	ContainerName  string
+	ContainerIface string
+	IngressRate    string
+}
+
+type OVSBulk map[string][]OVSInterface
+
 func DefaultParams() PortSettings {
 	return PortSettings{
 		MPLS:  false,
@@ -187,7 +196,7 @@ func GetOFPort(containerName, ifName string) (string, bool) {
 }
 
 // AddPort adds a port to the container, and links it with an OVS bridge
-func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings) error {
+func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, bulk OVSBulk) error {
 	if _, ok := c.FindPort(ifName); ok {
 		return fmt.Errorf("AddPort: interface %s already exists in container %s", ifName, c.ContainerName)
 	}
@@ -200,12 +209,21 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings) 
 		return err
 	}
 
-	// Add the host end of the veth to an OVS bridge
-	if err := c.addToBridge(brName, ifName, settings.Speed); err != nil {
-		return err
-	}
-
 	portHost, portCont := c.IfNames()
+
+	if bulk == nil {
+		// Add the host end of the veth to an OVS bridge
+		if err := c.addToBridge(brName, ifName, settings.Speed); err != nil {
+			return err
+		}
+	} else {
+		bulk[brName] = append(bulk[brName], OVSInterface{
+			HostIface:      portHost,
+			ContainerIface: ifName,
+			ContainerName:  c.ContainerName,
+			IngressRate:    strconv.Itoa(settings.Speed * 1000),
+		})
+	}
 
 	// Activate host side
 	if err := c.ExecLink("set", portHost, "up"); err != nil {
@@ -265,7 +283,7 @@ func (c *OVSDockerClient) ExecNS(args ...string) error {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("%s\n%s", string(stderr.Bytes()), err)
+		return fmt.Errorf("ExecNS: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
 	}
 	return nil
 }
@@ -279,7 +297,7 @@ func (c *OVSDockerClient) ExecLink(args ...string) error {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("%s\n%s", string(stderr.Bytes()), err)
+		return fmt.Errorf("ExecLink: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
 	}
 	return nil
 }
@@ -298,6 +316,34 @@ func (c *OVSDockerClient) addToBridge(brName, ifName string, speed int) error {
 		"external_ids:container_id=" + c.ContainerName,
 		"external_ids:container_iface=" + ifName,
 		"ingress_policing_rate=" + strconv.Itoa(speed*1000),
+	}
+	cmd := utils.ExecSudo(cmdArgs...)
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return errors.New(string(stderr.Bytes()))
+	}
+	return nil
+}
+
+func AddToBridgeBulk(elements map[string][]OVSInterface) error {
+	var stderr bytes.Buffer
+	size := 0
+	for _, v := range elements {
+		size += len(v)
+	}
+
+	cmdArgs := make([]string, 1, 15*size)
+	cmdArgs[0] = "ovs-vsctl"
+	for k, v := range elements {
+		for _, e := range v {
+			cmdArgs = append(cmdArgs,
+				"--", "add-port", k, e.HostIface,
+				"--", "set", "interface", e.HostIface,
+				"external_ids:container_id="+e.ContainerName,
+				"external_ids:container_iface="+e.ContainerIface,
+				"ingress_policing_rate="+e.IngressRate,
+			)
+		}
 	}
 	cmd := utils.ExecSudo(cmdArgs...)
 	cmd.Stderr = &stderr

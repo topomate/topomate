@@ -24,6 +24,7 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				Hostname:     r.Hostname,
 				Interfaces:   make(map[string]IfConfig, n),
 				StaticRoutes: make(staticRoutes, len(r.Links)),
+				MPLS:         as.MPLS,
 			}
 
 			// Loopback interface
@@ -216,8 +217,10 @@ func (c *FRRConfig) writeMPLS(dst io.Writer) {
 
 	fmt.Fprintln(dst, " address-family ipv4")
 	fmt.Fprintln(dst, "  discovery transport-address", c.BGP.RouterID)
-	for ifname := range c.Interfaces {
-		fmt.Fprintln(dst, "  interface", ifname)
+	for ifname, i := range c.Interfaces {
+		if !i.External {
+			fmt.Fprintln(dst, "  interface", ifname)
+		}
 	}
 	fmt.Fprintln(dst, " exit-address-family")
 
@@ -264,7 +267,9 @@ service integrated-vtysh-config
 		}
 	}
 
-	c.writeMPLS(dst)
+	if c.MPLS {
+		c.writeMPLS(dst)
+	}
 
 	fmt.Fprintln(dst, "line vty")
 

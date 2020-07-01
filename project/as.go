@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rahveiz/topomate/internal/ovsdocker"
+
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/rahveiz/topomate/config"
@@ -18,6 +20,7 @@ type AutonomousSystem struct {
 	ASN             int
 	IGP             string
 	RedistributeIGP bool
+	MPLS            bool
 	Network         Net
 	LoStart         net.IPNet
 	Routers         []*Router
@@ -77,13 +80,26 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 func (a *AutonomousSystem) ApplyLinks() {
 	brName := fmt.Sprintf("int-%d", a.ASN)
 	link.CreateBridge(brName)
+	bulk := make(ovsdocker.OVSBulk, len(a.Links))
+	bulk[brName] = make([]ovsdocker.OVSInterface, 0, len(a.Links))
 	for _, v := range a.Links {
 		idA := a.getContainerName(v.First.RouterID)
 		idB := a.getContainerName(v.Second.RouterID)
 		ifA := v.First.IfName
 		ifB := v.Second.IfName
-		link.AddPortToContainer(brName, ifA, idA)
-		link.AddPortToContainer(brName, ifB, idB)
+		link.AddPortToContainer(brName, ifA, idA, bulk)
+		link.AddPortToContainer(brName, ifB, idB, bulk)
+	}
+
+	if err := ovsdocker.AddToBridgeBulk(bulk); err != nil {
+		utils.Fatalln(err)
+	}
+
+	for _, v := range a.Links {
+		idA := a.getContainerName(v.First.RouterID)
+		idB := a.getContainerName(v.Second.RouterID)
+		ifA := v.First.IfName
+		ifB := v.Second.IfName
 		link.AddFlow(brName, idA, ifA, idB, ifB)
 	}
 }

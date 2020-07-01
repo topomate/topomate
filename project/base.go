@@ -49,6 +49,7 @@ func ReadConfig(path string) *Project {
 			ASN:             k.ASN,
 			IGP:             k.IGP,
 			RedistributeIGP: k.RedistributeIGP,
+			MPLS:            k.MPLS,
 			Routers:         make([]*Router, k.NumRouters),
 		}
 		if config.VFlag {
@@ -185,8 +186,8 @@ func (p Project) ApplyExternal() {
 		)
 
 		link.CreateBridge(brName)
-		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName)
-		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName)
+		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, nil)
+		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, nil)
 	}
 }
 

@@ -13,6 +13,7 @@ type FRRConfig struct {
 	Interfaces   map[string]IfConfig
 	BGP          BGPConfig
 	IGP          []interface{}
+	MPLS         bool
 	StaticRoutes map[string][]string
 }
 

@@ -14,6 +14,7 @@ type ASConfig struct {
 	Prefix          string        `yaml:"prefix,omitempty"`
 	LoRange         string        `yaml:"loopback_start,omitempty"`
 	Links           InternalLinks `yaml:"links,omitempty"`
+	MPLS            bool          `yaml:"mpls,omitempty"`
 }
 
 type ExternalEndpoint struct {

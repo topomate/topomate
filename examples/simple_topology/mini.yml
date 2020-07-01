@@ -1,7 +1,7 @@
 name: "Mini configuration"
 autonomous_systems:
   - asn: 42
-    routers: 4
+    routers: 10
     igp: OSPF
     prefix: '192.168.8.0/24'
     links:

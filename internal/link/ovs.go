@@ -29,10 +29,10 @@ func DeleteBridge(name string) {
 }
 
 // AddPortToContainer links a container to an OVS bridge
-func AddPortToContainer(brName, ifName, containerName string) {
+func AddPortToContainer(brName, ifName, containerName string, bulk ovsdocker.OVSBulk) {
 	c := ovsdocker.New(containerName)
-	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams()); err != nil {
-		utils.Fatalln(err)
+	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams(), bulk); err != nil {
+		utils.Fatalln("AddPort:", err)
 	}
 }
 
@@ -75,7 +75,6 @@ func AddFlow(brName, containerA, ifA, containerB, ifB string) {
 		"in_port="+portA+",actions=output:"+portB,
 	)
 	cmd.Stderr = &stderr
-	fmt.Println(cmd.String())
 	err := cmd.Run()
 	if err != nil {
 		utils.Fatalln("AddFlow:", string(stderr.Bytes()), err)
