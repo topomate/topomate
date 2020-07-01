@@ -17,14 +17,14 @@ type ASConfig struct {
 	MPLS            bool          `yaml:"mpls,omitempty"`
 }
 
-type ExternalEndpoint struct {
+type ExternalLinkItem struct {
 	ASN      int `yaml:"asn"`
 	RouterID int `yaml:"router_id"`
 }
 
 type ExternalLink struct {
-	From ExternalEndpoint `yaml:"from"`
-	To   ExternalEndpoint `yaml:"to"`
+	From ExternalLinkItem `yaml:"from"`
+	To   ExternalLinkItem `yaml:"to"`
 }
 
 type InternalLinks struct {

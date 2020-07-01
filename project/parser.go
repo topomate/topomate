@@ -17,18 +17,18 @@ func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 		var f, s *Router
 		if first, ok := v["first"]; ok {
 			f = a.getRouter(first)
-			l.First = NewNetInterface(f)
+			l.First = NewLinkItem(f)
 		} else {
 			utils.Fatalln("Manual link setup error: first key missing")
 		}
 		if second, ok := v["second"]; ok {
 			s = a.getRouter(second)
-			l.Second = NewNetInterface(s)
+			l.Second = NewLinkItem(s)
 		} else {
 			utils.PrintError("Manual link setup error: second key missing")
 		}
-		l.First.Description = fmt.Sprintf("linked to %s", s.Hostname)
-		l.Second.Description = fmt.Sprintf("linked to %s", f.Hostname)
+		l.First.Interface.Description = fmt.Sprintf("linked to %s", s.Hostname)
+		l.Second.Interface.Description = fmt.Sprintf("linked to %s", f.Hostname)
 		links[idx] = l
 	}
 
@@ -57,11 +57,11 @@ func (a AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 		f := a.getRouter(i)
 		s := a.getRouter((i % nbRouters) + 1)
 		links[i-1] = Link{
-			First:  NewNetInterface(f),
-			Second: NewNetInterface(s),
+			First:  NewLinkItem(f),
+			Second: NewLinkItem(s),
 		}
-		links[i-1].First.Description = fmt.Sprintf("linked to %s", s.Hostname)
-		links[i-1].Second.Description = fmt.Sprintf("linked to %s", f.Hostname)
+		links[i-1].First.Interface.Description = fmt.Sprintf("linked to %s", s.Hostname)
+		links[i-1].Second.Interface.Description = fmt.Sprintf("linked to %s", f.Hostname)
 	}
 	return links
 }
@@ -79,11 +79,11 @@ func (a AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
 			f := a.getRouter(i)
 			s := a.getRouter(j)
 			links[counter] = Link{
-				First:  NewNetInterface(f),
-				Second: NewNetInterface(s),
+				First:  NewLinkItem(f),
+				Second: NewLinkItem(s),
 			}
-			links[counter].First.Description = fmt.Sprintf("linked to %s", s.Hostname)
-			links[counter].Second.Description = fmt.Sprintf("linked to %s", f.Hostname)
+			links[counter].First.Interface.Description = fmt.Sprintf("linked to %s", s.Hostname)
+			links[counter].Second.Interface.Description = fmt.Sprintf("linked to %s", f.Hostname)
 			counter++
 		}
 	}

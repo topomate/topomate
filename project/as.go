@@ -83,10 +83,10 @@ func (a *AutonomousSystem) ApplyLinks() {
 	bulk := make(ovsdocker.OVSBulk, len(a.Links))
 	bulk[brName] = make([]ovsdocker.OVSInterface, 0, len(a.Links))
 	for _, v := range a.Links {
-		idA := a.getContainerName(v.First.RouterID)
-		idB := a.getContainerName(v.Second.RouterID)
-		ifA := v.First.IfName
-		ifB := v.Second.IfName
+		idA := v.First.Router.ContainerName
+		idB := v.Second.Router.ContainerName
+		ifA := v.First.Interface.IfName
+		ifB := v.Second.Interface.IfName
 		link.AddPortToContainer(brName, ifA, idA, bulk)
 		link.AddPortToContainer(brName, ifB, idB, bulk)
 	}
@@ -96,10 +96,10 @@ func (a *AutonomousSystem) ApplyLinks() {
 	}
 
 	for _, v := range a.Links {
-		idA := a.getContainerName(v.First.RouterID)
-		idB := a.getContainerName(v.Second.RouterID)
-		ifA := v.First.IfName
-		ifB := v.Second.IfName
+		idA := v.First.Router.ContainerName
+		idB := v.Second.Router.ContainerName
+		ifA := v.First.Interface.IfName
+		ifB := v.Second.Interface.IfName
 		link.AddFlow(brName, idA, ifA, idB, ifB)
 	}
 }
@@ -130,10 +130,10 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 	for _, v := range a.Links {
 		// ip = cidr.Inc(ip)
 		n.IP = cidr.Inc(n.IP)
-		v.First.IP = *n
+		v.First.Interface.IP = *n
 		// ip = cidr.Inc(ip)
 		n.IP = cidr.Inc(n.IP)
-		v.Second.IP = *n
+		v.Second.Interface.IP = *n
 		assigned += 2
 
 		// check if we need to get next subnet
@@ -153,27 +153,35 @@ func (a *AutonomousSystem) linkRouters() {
 	for _, lnk := range a.Links {
 		first := lnk.First
 		second := lnk.Second
-		firstID := first.IP.IP.String()
-		secondID := second.IP.IP.String()
-		if len(a.Routers[first.RouterID-1].Loopback) > 0 {
-			firstID = a.Routers[first.RouterID-1].Loopback[0].IP.String()
+
+		// Get the interface IP address without mask for BGP configuration
+		firstID := first.Interface.IP.IP.String()
+		secondID := second.Interface.IP.IP.String()
+
+		// Replace it by the loopback address if present
+		if len(first.Router.Loopback) > 0 {
+			firstID = first.Router.Loopback[0].IP.String()
 		}
-		if len(a.Routers[second.RouterID-1].Loopback) > 0 {
-			secondID = a.Routers[second.RouterID-1].Loopback[0].IP.String()
+		if len(second.Router.Loopback) > 0 {
+			secondID = second.Router.Loopback[0].IP.String()
 		}
 
-		a.Routers[first.RouterID-1].Links =
-			append(a.Routers[first.RouterID-1].Links, first)
-		a.Routers[first.RouterID-1].Neighbors[secondID] = BGPNbr{
+		// Add a reference to the interface to the router so it can access its properties
+		first.Router.Links =
+			append(first.Router.Links, first.Interface)
+
+		// Add an entry in the neighbors table
+		first.Router.Neighbors[secondID] = BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  true,
 		}
 
-		a.Routers[second.RouterID-1].Links =
-			append(a.Routers[second.RouterID-1].Links, second)
-		a.Routers[second.RouterID-1].Neighbors[firstID] = BGPNbr{
+		// Do the same thing for the second part of the link
+		second.Router.Links =
+			append(second.Router.Links, second.Interface)
+		second.Router.Neighbors[firstID] = BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,

@@ -10,7 +10,6 @@ const (
 )
 
 type NetInterface struct {
-	RouterID    int
 	IfName      string
 	Description string
 	IP          net.IPNet
@@ -18,34 +17,41 @@ type NetInterface struct {
 	External    bool
 }
 
+type LinkItem struct {
+	Router    *Router
+	Interface *NetInterface
+}
+
 type Link struct {
-	First  *NetInterface
-	Second *NetInterface
+	First  *LinkItem
+	Second *LinkItem
 }
 
-// IfNames returns the name of both interfaces of a link
-// as "eth" + destination index
-func (l Link) IfNames() (string, string) {
-	a := fmt.Sprintf("eth%d", l.Second.RouterID)
-	b := fmt.Sprintf("eth%d", l.First.RouterID)
-	return a, b
-}
+// // IfNames returns the name of both interfaces of a link
+// // as "eth" + destination index
+// func (l Link) IfNames() (string, string) {
+// 	a := fmt.Sprintf("eth%d", l.Second.RouterID)
+// 	b := fmt.Sprintf("eth%d", l.First.RouterID)
+// 	return a, b
+// }
 
-func (l Link) BrName(asn int) string {
-	return fmt.Sprintf(
-		"as%d-br-%d-%d",
-		asn, l.First.RouterID,
-		l.Second.RouterID,
-	)
-}
+// func (l Link) BrName(asn int) string {
+// 	return fmt.Sprintf(
+// 		"as%d-br-%d-%d",
+// 		asn, l.First.RouterID,
+// 		l.Second.RouterID,
+// 	)
+// }
 
-func NewNetInterface(router *Router) *NetInterface {
+func NewLinkItem(router *Router) *LinkItem {
 	ifName := fmt.Sprintf("eth%d", router.NextInterface)
 	router.NextInterface++
-	return &NetInterface{
-		RouterID: router.ID,
-		IfName:   ifName,
-		IP:       net.IPNet{},
-		Speed:    10000,
+	return &LinkItem{
+		Router: router,
+		Interface: &NetInterface{
+			IfName: ifName,
+			IP:     net.IPNet{},
+			Speed:  10000,
+		},
 	}
 }
