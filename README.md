@@ -11,95 +11,81 @@ Network Topology Automation using FRRouting containers
 Topomate reads a YAML configuration file describing a network topology,
 and generates containers, links and configurations from it.
 
-### Configuration example
-
-The following configuration :
-
+### Example configuration file
 
 ```yaml
 autonomous_systems:
-  - asn: 10
-    routers: 4
+  - asn: 1
+    routers: 2
     loopback_start: '172.16.10.1/32'
     igp: OSPF
     redistribute_igp: true
-    prefix: '192.168.8.0/26'
+    prefix: '10.1.1.0/24'
+    mpls: true
     links:
       kind: 'full-mesh'
       subnet_length: 30
-  - asn: 20
+  - asn: 2
     routers: 2
     loopback_start: '172.16.20.1/32'
     igp: OSPF
     redistribute_igp: true
-    prefix: '10.10.10.0/28'
+    prefix: '10.1.2.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30  
-  
+      subnet_length: 30
+  - asn: 3
+    routers: 2
+    loopback_start: '172.16.30.1/32'
+    igp: OSPF
+    redistribute_igp: true
+    prefix: '10.1.3.0/24'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 4
+    routers: 2
+    loopback_start: '172.16.40.1/32'
+    igp: OSPF
+    redistribute_igp: true
+    prefix: '10.1.4.0/24'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+
 external_links:
   - from:
-      asn: 10
+      asn: 1
       router_id: 1
     to:
-      asn: 20
-      router_id: 2
+      asn: 2
+      router_id: 1
+    rel: 'p2c'
+  - from:
+      asn: 2
+      router_id: 1
+    to:
+      asn: 3
+      router_id: 1
+    rel: 'p2p'
+  - from:
+      asn: 2
+      router_id: 1
+    to:
+      asn: 4
+      router_id: 1
+    rel: 'p2c'
 ```
 
-will generate 6 containers (AS10-R1..4 and AS20-R1..2), create bridges and links
-using OVS, and generate FRR configuration files.
+This file will :
 
-For AS10-R1, the following configuration will be generated :
+* generate 8 containers (AS1-R1, AS1-R2, ..., AS4-R2) and the corresponding FRRouting
+configuration files (that will be copied to the corresponding container)
+* create 1 OVS bridge per AS for internal links that will interconnect containers
+(using veth pairs, and OpenFlow rules)
+* create 1 OVS bridge per external link
 
-```
-frr version 7.3
-frr defaults traditional
-hostname R2
-log syslog informational
-no ipv6 forwarding
-service integrated-vtysh-config
-!
-!
-interface lo
- ip address 172.16.20.2/32
- ip ospf area 0
-!
-!
-interface eth0
- description linked to R1
- ip address 10.10.10.2/30
- ip ospf area 0
-!
-!
-interface eth1
- description linked to AS10 (R1)
- ip address 192.168.8.26/30
-!
-!
-ip route 172.16.10.1/32 eth1
-!
-!
-router bgp 20
- bgp router-id 172.16.20.2
- neighbor 172.16.20.1 remote-as 20
- neighbor 172.16.20.1 update-source lo
- neighbor 172.16.20.1 disable-connected-check
- neighbor 172.16.10.1 remote-as 10
- neighbor 172.16.10.1 update-source lo
- neighbor 172.16.10.1 disable-connected-check
- !
- address-family ipv4 unicast
-  redistribute ospf
-  network 10.10.10.0/28
- exit-address-family
-!
-!
-router ospf
- redistribute connected
-!
-line vty
-```
-
+Currently, the router ID used for BGP and OSPF is the first loopback address.
 
 ## Notes concerning MPLS
 
