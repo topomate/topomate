@@ -114,7 +114,7 @@ func ReadConfig(path string) *Project {
 
 	}
 
-	// External links setup
+	/************************** External links setup **************************/
 
 	for _, k := range conf.External {
 		l := &ExternalLink{
@@ -126,6 +126,22 @@ func ReadConfig(path string) *Project {
 				k.To.ASN,
 				proj.AS[k.To.ASN].Routers[k.To.RouterID-1],
 			),
+		}
+		switch strings.ToLower(k.Relationship) {
+		case "p2c":
+			l.From.Relation = Provider
+			l.To.Relation = Customer
+			break
+		case "c2p":
+			l.From.Relation = Customer
+			l.To.Relation = Provider
+			break
+		case "p2p":
+			l.From.Relation = Peer
+			l.To.Relation = Peer
+			break
+		default:
+			break
 		}
 		l.setupExternal(&proj.AS[k.From.ASN].Network.NextAvailable)
 		proj.Ext = append(proj.Ext, l)
@@ -318,6 +334,7 @@ func (p *Project) linkExternal() {
 		lnk.From.Router.Links =
 			append(lnk.From.Router.Links, lnk.From.Interface)
 
+		rmIn, rmOut := getRouteMaps(lnk.To.Relation, nil, nil)
 		// Add an entry in the neighbors table
 		lnk.From.Router.Neighbors[toID] = BGPNbr{
 			RemoteAS:     lnk.To.ASN,
@@ -325,6 +342,8 @@ func (p *Project) linkExternal() {
 			ConnCheck:    false,
 			NextHopSelf:  false,
 			IfName:       lnk.From.Interface.IfName,
+			RouteMapsIn:  rmIn,
+			RouteMapsOut: rmOut,
 		}
 
 		// Do the same thing for the second part of the link
@@ -332,12 +351,38 @@ func (p *Project) linkExternal() {
 		lnk.To.Router.Links =
 			append(lnk.To.Router.Links, lnk.To.Interface)
 
+		rmIn, rmOut = getRouteMaps(lnk.From.Relation, nil, nil)
 		lnk.To.Router.Neighbors[fromID] = BGPNbr{
 			RemoteAS:     lnk.From.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  false,
 			IfName:       lnk.To.Interface.IfName,
+			RouteMapsIn:  rmIn,
+			RouteMapsOut: rmOut,
 		}
 	}
+}
+
+func getRouteMaps(relation int, inMaps []string, outMaps []string) ([]string, []string) {
+	in := make([]string, 0, len(inMaps)+1)
+	out := make([]string, 0, len(outMaps)+1)
+	switch relation {
+	case Provider:
+		in = append(in, "PROVIDER_IN")
+		out = append(out, "PROVIDER_OUT")
+		break
+	case Peer:
+		in = append(in, "PEER_IN")
+		out = append(out, "PEER_OUT")
+		break
+	case Customer:
+		in = append(in, "CUSTOMER_IN")
+		out = append(out, "CUSTOMER_OUT")
+		break
+	default:
+		break
+	}
+
+	return append(in, inMaps...), append(out, outMaps...)
 }

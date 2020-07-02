@@ -147,6 +147,16 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 		if v.NextHopSelf {
 			fmt.Fprintln(dst, "  neighbor", ip, "next-hop-self")
 		}
+		if v.RouteMapsIn != nil {
+			for _, m := range v.RouteMapsIn {
+				fmt.Fprintln(dst, "  neighbor", ip, "route-map", m, "in")
+			}
+		}
+		if v.RouteMapsOut != nil {
+			for _, m := range v.RouteMapsOut {
+				fmt.Fprintln(dst, "  neighbor", ip, "route-map", m, "out")
+			}
+		}
 	}
 	fmt.Fprintln(dst, " exit-address-family")
 
@@ -227,6 +237,47 @@ func (c *FRRConfig) writeMPLS(dst io.Writer) {
 	sep(dst)
 }
 
+func writeRelationsMaps(dst io.Writer, asn int) {
+
+	// Default route maps
+	peerComm := fmt.Sprintf("%d:%d", asn, fromPeer)
+	custComm := fmt.Sprintf("%d:%d", asn, fromCustomer)
+	provComm := fmt.Sprintf("%d:%d", asn, fromProvider)
+	fmt.Fprintf(dst,
+		`!
+bgp community-list standard PROVIDER seq 5 permit %s
+bgp community-list standard PEER seq 5 permit %s
+bgp community-list standard CUSTOMER seq 5 permit %s
+!
+route-map PEER_OUT deny 10
+ match community PROVIDER
+ !
+route-map PEER_OUT deny 15
+ match community PEER
+!
+route-map PEER_OUT permit 20
+!
+route-map PROVIDER_OUT deny 10
+ match community PEER
+!
+route-map PROVIDER_OUT deny 15
+ match community PROVIDER
+!
+route-map PROVIDER_OUT permit 20
+!
+route-map CUSTOMER_OUT permit 20
+!
+route-map PEER_IN permit 20
+ set community %s
+!
+route-map CUSTOMER_IN permit 10
+ set community %s
+!
+route-map PROVIDER_IN permit 10
+ set community %s
+!`, provComm, peerComm, custComm, peerComm, custComm, provComm)
+}
+
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("config_directory", "~/.topogen")
 	file, err := os.Create(fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname))
@@ -253,6 +304,8 @@ service integrated-vtysh-config
 	writeStatic(dst, c.StaticRoutes)
 
 	writeBGP(dst, c.BGP)
+
+	writeRelationsMaps(dst, c.BGP.ASN)
 
 	for _, igp := range c.IGP {
 		switch igp.(type) {

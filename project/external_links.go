@@ -7,10 +7,17 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 )
 
+const (
+	Provider = iota
+	Customer = iota
+	Peer     = iota
+)
+
 type ExternalLinkItem struct {
 	ASN       int
 	Router    *Router
 	Interface *NetInterface
+	Relation  int
 }
 
 type ExternalLink struct {
