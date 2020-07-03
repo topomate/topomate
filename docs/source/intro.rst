@@ -5,7 +5,7 @@ Topomate is a tool written in Golang that allows you to quickly setup emulated
 network topologies on a single host.
 
 Inspirations
-************
+############
 
 This project takes its roots from already existing projects such as:
 
