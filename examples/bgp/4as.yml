@@ -1,19 +1,14 @@
-# topomate (WIP)
+name: '4 AS'
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/rahveiz/topomate)](https://goreportcard.com/report/github.com/rahveiz/topomate)
-![CI](https://github.com/rahveiz/topomate/workflows/CI/badge.svg)
+# Simple topology with 4 AS : AS1 <- AS2, AS2 <-> AS3, AS2 <- AS4
+# AS1
+# |
+# | 
+# AS2 -- AS3
+# |
+# |
+# AS4
 
-Network Topology Automation using FRRouting containers
-
-
-## How does it work ?
-
-Topomate reads a YAML configuration file describing a network topology,
-and generates containers, links and configurations from it.
-
-### Example configuration file
-
-```yaml
 autonomous_systems:
   - asn: 1
     routers: 2
@@ -75,23 +70,3 @@ external_links:
       asn: 4
       router_id: 1
     rel: 'p2c'
-```
-
-This file will :
-
-* generate 8 containers (AS1-R1, AS1-R2, ..., AS4-R2) and the corresponding FRRouting
-configuration files (that will be copied to the corresponding container)
-* create 1 OVS bridge per AS for internal links that will interconnect containers
-(using veth pairs, and OpenFlow rules)
-* create 1 OVS bridge per external link
-
-Currently, the router ID used for BGP and OSPF is the first loopback address.
-
-## Notes concerning MPLS
-
-If you want to use MPLS, the following kernel modules must be enabled on the host machine
-
-```
-mpls_router
-mpls_iptunnel
-```

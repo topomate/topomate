@@ -6,6 +6,12 @@ import (
 	"github.com/rahveiz/topomate/project"
 )
 
+const (
+	fromCustomer = 10
+	fromProvider = 20
+	fromPeer     = 30
+)
+
 type staticRoutes map[string][]string
 
 type FRRConfig struct {

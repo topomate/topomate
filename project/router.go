@@ -19,6 +19,8 @@ type BGPNbr struct {
 	ConnCheck    bool
 	NextHopSelf  bool
 	IfName       string
+	RouteMapsIn  []string
+	RouteMapsOut []string
 }
 
 type Router struct {

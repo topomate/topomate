@@ -10,7 +10,7 @@ import (
 
 // SetupManual generates an internal links configuration based on the provided
 // informations
-func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
+func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 	links := make([]Link, len(lm.Specs))
 	for idx, v := range lm.Specs {
 		l := Link{}
@@ -47,7 +47,7 @@ func (a AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 }
 
 // SetupRing generates an internal links configuration using a ring topology
-func (a AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
+func (a *AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 	nbRouters := len(a.Routers)
 	if nbRouters < 3 {
 		utils.Fatalln("Cannot create ring topology with less than 3 routers.")
@@ -67,11 +67,11 @@ func (a AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 }
 
 // SetupRing generates an internal links configuration using a full-mesh topology
-func (a AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
+func (a *AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
 	nbRouters := len(a.Routers)
-	if nbRouters < 2 {
-		return nil
-	}
+	// if nbRouters < 2 {
+	// 	return nil
+	// }
 	links := make([]Link, nbRouters*(nbRouters-1)/2)
 	counter := 0
 	for i := 1; i <= nbRouters; i++ {

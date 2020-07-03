@@ -23,8 +23,9 @@ type ExternalLinkItem struct {
 }
 
 type ExternalLink struct {
-	From ExternalLinkItem `yaml:"from"`
-	To   ExternalLinkItem `yaml:"to"`
+	From         ExternalLinkItem `yaml:"from"`
+	To           ExternalLinkItem `yaml:"to"`
+	Relationship string           `yaml:"rel"`
 }
 
 type InternalLinks struct {
