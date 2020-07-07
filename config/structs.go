@@ -54,5 +54,6 @@ type InternalLinks struct {
 	Kind         string              `yaml:"kind"`
 	SubnetLength int                 `yaml:"subnet_length"`
 	Preset       string              `yaml:"preset,omitempty"`
-	Specs        []map[string]string `yaml:"specs"`
+	Specs        []map[string]string `yaml:"specs,omitempty"`
+	Filepath     string              `yaml:"file"`
 }

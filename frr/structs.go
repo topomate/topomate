@@ -30,6 +30,7 @@ type IfConfig struct {
 	OSPF6       int
 	Speed       int
 	External    bool
+	Cost        int
 }
 
 type BGPNbr project.BGPNbr

@@ -91,6 +91,7 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 					OSPF:        -1,
 					Speed:       iface.Speed,
 					External:    iface.External,
+					Cost:        iface.Cost,
 				}
 				if igp == "OSPF" && !iface.External {
 					if is4 {
@@ -215,7 +216,7 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 		fmt.Fprintln(dst, " ip ospf area", c.OSPF)
 	}
 	if c.Speed > 0 {
-		fmt.Fprintln(dst, " bandwidth", c.Speed)
+		fmt.Fprintln(dst, " bandwidth", c.Cost)
 	}
 
 	sep(dst)
@@ -289,7 +290,9 @@ route-map PROVIDER_IN permit 10
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("config_directory", "~/.topogen")
 	filename := fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname)
-	fmt.Println("writing", filename)
+	if config.VFlag {
+		fmt.Println("writing", filename)
+	}
 	file, err := os.Create(filename)
 	if err != nil {
 		utils.Fatalln(err)

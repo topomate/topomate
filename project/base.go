@@ -52,6 +52,11 @@ func ReadConfig(path string) *Project {
 
 	// Iterate on AS elements from the config to fill the project
 	for _, k := range conf.AS {
+		// Basic validation
+		if k.NumRouters < 1 {
+			utils.Fatalf("AS%d: cannot generate AS without routers\n", k.ASN)
+		}
+
 		// Copy informations from the config
 		proj.AS[k.ASN] = &AutonomousSystem{
 			ASN:             k.ASN,

@@ -2,7 +2,7 @@ name: "foobar"
 autonomous_systems:
   - asn: 420
     # routers: 8
-    routers: 3
+    routers: 4
     loopback_start: '10.1.1.1/32'
     igp: OSPF
     redistribute_igp: true
@@ -10,13 +10,7 @@ autonomous_systems:
     links:
       kind: 'manual'
       subnet_length: 30
-      # preset: 'ring'
-      specs:
-        # - first: 2
-        #   second: 6
-        # - first: 3
-        #   second: 7
-        - first: 1
-          second: 2
-        - first: 2
-          second: 3
+      file: '/home/paul/Git/topomate/examples/mpls/internalconf'
+      # specs:
+      #   - first: 1
+      #     second : 2

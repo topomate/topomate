@@ -55,6 +55,11 @@ func (a AutonomousSystem) getRouter(n interface{}) *Router {
 	default:
 		utils.Fatalln("getRouter: index type mismtach")
 	}
+	nbr := len(a.Routers)
+
+	if idx-1 >= nbr {
+		utils.Fatalf("getRouter: invalid router number %d (has range from %d to %d)\n", idx-1, 1, nbr)
+	}
 
 	return a.Routers[idx-1]
 }
