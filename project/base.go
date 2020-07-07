@@ -39,6 +39,9 @@ func ReadConfig(path string) *Project {
 		utils.Fatalln(err)
 	}
 
+	// Init global settings
+	conf.Global.BGP.ToGlobal()
+
 	nbAS := len(conf.AS)
 
 	// Create a project

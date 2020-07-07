@@ -5,8 +5,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -240,14 +242,17 @@ func (c *FRRConfig) writeMPLS(dst io.Writer) {
 func writeRelationsMaps(dst io.Writer, asn int) {
 
 	// Default route maps
-	peerComm := fmt.Sprintf("%d:%d", asn, fromPeer)
-	custComm := fmt.Sprintf("%d:%d", asn, fromCustomer)
-	provComm := fmt.Sprintf("%d:%d", asn, fromProvider)
+	provComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Provider.Community)
+	provLP := strconv.Itoa(config.DefaultBGPSettings.Provider.LocalPref)
+	peerComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Peer.Community)
+	peerLP := strconv.Itoa(config.DefaultBGPSettings.Peer.LocalPref)
+	custComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Customer.Community)
+	custLP := strconv.Itoa(config.DefaultBGPSettings.Customer.LocalPref)
 	fmt.Fprintf(dst,
 		`!
-bgp community-list standard PROVIDER seq 5 permit %s
-bgp community-list standard PEER seq 5 permit %s
-bgp community-list standard CUSTOMER seq 5 permit %s
+bgp community-list standard PROVIDER seq 5 permit %[1]s
+bgp community-list standard PEER seq 5 permit %[3]s
+bgp community-list standard CUSTOMER seq 5 permit %[5]s
 !
 route-map PEER_OUT deny 10
  match community PROVIDER
@@ -268,19 +273,24 @@ route-map PROVIDER_OUT permit 20
 route-map CUSTOMER_OUT permit 20
 !
 route-map PEER_IN permit 20
- set community %s
+ set community %[3]s
+ set local-preference %[4]s
 !
 route-map CUSTOMER_IN permit 10
- set community %s
+ set community %[5]s
+ set local-preference %[6]s
 !
 route-map PROVIDER_IN permit 10
- set community %s
-!`, provComm, peerComm, custComm, peerComm, custComm, provComm)
+ set community %[1]s
+ set local-preference %[2]s
+!`, provComm, provLP, peerComm, peerLP, custComm, custLP)
 }
 
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("config_directory", "~/.topogen")
-	file, err := os.Create(fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname))
+	filename := fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname)
+	fmt.Println("writing", filename)
+	file, err := os.Create(filename)
 	if err != nil {
 		utils.Fatalln(err)
 	}

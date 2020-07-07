@@ -8,6 +8,13 @@ name: '4 AS'
 # |
 # |
 # AS4
+global_settings:
+  bgp:
+    provider:
+      community: 50
+      local_pref: 86
+    peer:
+      local_pref: 210
 
 autonomous_systems:
   - asn: 1
