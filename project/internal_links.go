@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 
 	"github.com/rahveiz/topomate/config"
@@ -59,7 +60,11 @@ func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 		if lm.Filepath == "" {
 			utils.Fatalln("Manual link setup error: please provide either a file or specs")
 		}
-		links = a.internalFromFile(lm.Filepath)
+		if filepath.IsAbs(lm.Filepath) {
+			links = a.internalFromFile(lm.Filepath)
+		} else {
+			links = a.internalFromFile(config.ConfigDir + "/" + lm.Filepath)
+		}
 	} else {
 		links = make([]Link, len(lm.Specs))
 		for idx, v := range lm.Specs {

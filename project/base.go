@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,8 @@ func ReadConfig(path string) *Project {
 	if err := yaml.Unmarshal(data, conf); err != nil {
 		utils.Fatalln(err)
 	}
+
+	config.ConfigDir = filepath.Dir(path)
 
 	// Init global settings
 	conf.Global.BGP.ToGlobal()
