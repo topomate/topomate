@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"sync"
 
+	"github.com/rahveiz/topomate/config"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -51,7 +53,7 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 	})
 	if len(li) == 0 { // container does not exist yet
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
-			Image:           "topomate-router",
+			Image:           config.DockerRouterImage,
 			Hostname:        r.Hostname,
 			NetworkDisabled: true, // docker networking disabled as we use OVS
 		}, &container.HostConfig{

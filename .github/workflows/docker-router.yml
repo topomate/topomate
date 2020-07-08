@@ -1,6 +1,9 @@
 name: Auto-build Docker images
 
-on: [push]
+on:
+  push:
+    paths:
+      - 'images/**'
 
 jobs:
   build-router:

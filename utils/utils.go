@@ -1,11 +1,16 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/mitchellh/go-homedir"
+	"github.com/rahveiz/topomate/config"
 	"github.com/spf13/viper"
 )
 
@@ -71,4 +76,29 @@ func GetDirectoryFromKey(key, defaultPath string) string {
 		Fatalf("GetDirectoryFromKey: configured directory error: %v\n", err)
 	}
 	return defaultDir
+}
+
+// PullImages pulls the latest version of docker images used by topomate
+func PullImages() {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+
+	if config.VFlag {
+		fmt.Print("Pulling latest router image... ")
+	}
+	out, err := cli.ImagePull(ctx, config.DockerRouterImage, types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}
+	if config.VFlag {
+		fmt.Println("Done.")
+	}
+
+	defer out.Close()
+	if _, err := ioutil.ReadAll(out); err != nil {
+		panic(err)
+	}
 }

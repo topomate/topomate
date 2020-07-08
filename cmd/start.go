@@ -41,6 +41,7 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			utils.Fatalln(err)
 		}
+		utils.PullImages()
 		newConf.StartAll(links)
 	},
 }
