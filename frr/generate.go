@@ -79,6 +79,11 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 					c.BGP.Redistribute.OSPF = true
 				}
 				break
+			case "IS-IS", "ISIS":
+				if as.RedistributeIGP {
+					c.BGP.Redistribute.ISIS = true
+				}
+				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2))
 			default:
 				break
 			}
@@ -88,16 +93,29 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 				ifCfg := IfConfig{
 					IPs:         []net.IPNet{iface.IP},
 					Description: iface.Description,
-					OSPF:        -1,
 					Speed:       iface.Speed,
 					External:    iface.External,
-					Cost:        iface.Cost,
+					IGPConfig:   make([]IGPIfConfig, 0, 5),
 				}
-				if igp == "OSPF" && !iface.External {
-					if is4 {
-						ifCfg.OSPF = 0
-					} else {
-						ifCfg.OSPF6 = 0
+				if !iface.External {
+					switch igp {
+					case "OSPF":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, OSPFIfConfig{
+								V6:        !is4,
+								Cost:      iface.Cost,
+								ProcessID: 0,
+								Area:      0,
+							})
+					case "ISIS", "IS-IS":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, ISISIfConfig{
+								V6:          !is4,
+								ProcessName: isisDefaultProcess,
+								Cost:        iface.Cost,
+								CircuitType: 2,
+							})
+						break
 					}
 				}
 				c.Interfaces[iface.IfName] = ifCfg
@@ -166,6 +184,17 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 	sep(dst)
 }
 
+func writeISIS(dst io.Writer, c ISISConfig) {
+	sep(dst)
+
+	fmt.Fprintln(dst, "router isis", c.ProcessName)
+	fmt.Fprintln(dst, " net", c.ISO)
+	fmt.Fprintln(dst, " metric-style wide")
+	fmt.Fprintln(dst, " is-type", isisTypeString(c.Type))
+
+	sep(dst)
+}
+
 func writeOSPF(dst io.Writer, c OSPFConfig) {
 	sep(dst)
 
@@ -189,8 +218,16 @@ func writeOSPF6(dst io.Writer, c OSPF6Config, ifs map[string]IfConfig) {
 	// multi-instance OSPFv3 is not supported yet on FRRouting
 	fmt.Fprintln(dst, "router ospf6")
 	for n, i := range ifs {
-		if i.OSPF6 != -1 {
-			fmt.Fprintln(dst, " interface", n, "area 0")
+		for _, e := range i.IGPConfig {
+			switch e.(type) {
+			case OSPFIfConfig:
+				if e.(OSPFIfConfig).V6 {
+					fmt.Fprintln(dst, " interface", n, "area 0")
+				}
+				break
+			default:
+				break
+			}
 		}
 	}
 	if c.RouterID != "" {
@@ -212,11 +249,8 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 	for _, ip := range c.IPs {
 		fmt.Fprintln(dst, " ip address", ip.String())
 	}
-	if c.OSPF != -1 {
-		fmt.Fprintln(dst, " ip ospf area", c.OSPF)
-	}
-	if c.Speed > 0 {
-		fmt.Fprintln(dst, " bandwidth", c.Cost)
+	for _, i := range c.IGPConfig {
+		i.Write(dst)
 	}
 
 	sep(dst)
@@ -285,6 +319,8 @@ route-map PROVIDER_IN permit 10
  set community %[1]s
  set local-preference %[2]s
 !`, provComm, provLP, peerComm, peerLP, custComm, custLP)
+
+	sep(dst)
 }
 
 func WriteConfig(c FRRConfig) {
@@ -327,6 +363,9 @@ service integrated-vtysh-config
 			break
 		case OSPF6Config:
 			writeOSPF6(dst, igp.(OSPF6Config), c.internalIfs())
+			break
+		case ISISConfig:
+			writeISIS(dst, igp.(ISISConfig))
 			break
 		default:
 			break
@@ -371,5 +410,33 @@ func getOSPF6Config(routerID string) OSPF6Config {
 		},
 		RouterID: routerID,
 	}
+	return cfg
+}
+
+/* IS-IS */
+
+func getISISConfig(ip net.IP, area, t int) ISISConfig {
+	cfg := ISISConfig{
+		ProcessName: isisDefaultProcess,
+		Type:        t,
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return cfg
+	}
+	parts := [4]string{
+		fmt.Sprintf("%03d", ip[0]),
+		fmt.Sprintf("%03d", ip[1]),
+		fmt.Sprintf("%03d", ip[2]),
+		fmt.Sprintf("%03d", ip[3]),
+	}
+	iso := fmt.Sprintf(
+		"49.%04d.%s%c.%s%s.%c%s.00",
+		area,
+		parts[0], parts[1][0],
+		parts[1][1:3], parts[2][0:2],
+		parts[2][2], parts[3],
+	)
+	cfg.ISO = iso
 	return cfg
 }

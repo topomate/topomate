@@ -1,15 +1,17 @@
 package frr
 
 import (
+	"io"
 	"net"
 
 	"github.com/rahveiz/topomate/project"
 )
 
 const (
-	fromCustomer = 10
-	fromProvider = 20
-	fromPeer     = 30
+	fromCustomer       = 10
+	fromProvider       = 20
+	fromPeer           = 30
+	isisDefaultProcess = "1"
 )
 
 type staticRoutes map[string][]string
@@ -26,11 +28,9 @@ type FRRConfig struct {
 type IfConfig struct {
 	Description string
 	IPs         []net.IPNet
-	OSPF        int
-	OSPF6       int
+	IGPConfig   []IGPIfConfig
 	Speed       int
 	External    bool
-	Cost        int
 }
 
 type BGPNbr project.BGPNbr
@@ -42,6 +42,12 @@ type BGPConfig struct {
 	Networks     []string
 	Networks6    []string
 	Redistribute RouteRedistribution
+}
+
+type ISISConfig struct {
+	ProcessName string
+	ISO         string
+	Type        int
 }
 
 type OSPFConfig struct {
@@ -60,4 +66,22 @@ type RouteRedistribution struct {
 	OSPF      bool
 	Connected bool
 	ISIS      bool
+}
+
+type IGPIfConfig interface {
+	Write(dst io.Writer)
+}
+
+type ISISIfConfig struct {
+	V6          bool
+	ProcessName string
+	CircuitType int
+	Cost        int
+}
+
+type OSPFIfConfig struct {
+	V6        bool
+	ProcessID int
+	Area      int
+	Cost      int
 }

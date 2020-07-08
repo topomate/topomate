@@ -4,13 +4,10 @@ autonomous_systems:
     # routers: 8
     routers: 4
     loopback_start: '10.1.1.1/32'
-    igp: OSPF
+    igp: ISIS
     redistribute_igp: true
     prefix: '172.18.10.0/24'
     links:
       kind: 'manual'
       subnet_length: 30
       file: 'internalconf'
-      # specs:
-      #   - first: 1
-      #     second : 2

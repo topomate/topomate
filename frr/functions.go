@@ -50,3 +50,34 @@ func (c *FRRConfig) externalIfs() map[string]IfConfig {
 	}
 	return res
 }
+
+func isisTypeString(t int) string {
+	var ctype string
+	switch t {
+	case 1:
+		ctype = "level-1"
+		break
+	case 2:
+		ctype = "level-2-only"
+		break
+	default:
+		ctype = "level-1-2"
+		break
+	}
+	return ctype
+}
+
+func (c ISISIfConfig) Write(dst io.Writer) {
+	ipver := " ip"
+	if c.V6 {
+		ipver = " ipv6"
+	}
+	fmt.Fprintln(dst, ipver, "router isis", c.ProcessName)
+
+	fmt.Fprintln(dst, " isis circuit-type", isisTypeString(c.CircuitType))
+}
+
+func (c OSPFIfConfig) Write(dst io.Writer) {
+	fmt.Fprintln(dst, " ip ospf area", c.Area)
+	fmt.Fprintln(dst, " bandwidth", c.Cost)
+}
