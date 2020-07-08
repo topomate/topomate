@@ -28,6 +28,7 @@ import (
 
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
+	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -78,6 +79,9 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.SetDefault("MainDir", config.DefaultDir)
+	viper.SetDefault("ProjectDir", config.DefaultProjectDir)
+	viper.SetDefault("ConfigDir", config.DefaultConfigDir)
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
@@ -125,9 +129,10 @@ func getConfig(cmd *cobra.Command, args []string) *project.Project {
 		var err error
 		target, err := cmd.Flags().GetString("project")
 		if err != nil {
-			log.Fatalln(err)
+			utils.Fatalln(err)
 		}
-		return project.Get(target)
+		viper.Set("ConfigDir", viper.GetString("ConfigDir")+"/"+target)
+		return project.ReadConfig(utils.GetDirectoryFromKey("ProjectDir", "") + "/" + target + ".yml")
 	}
 
 	if len(args) == 0 {

@@ -66,7 +66,7 @@ var deleteCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(projectCmd)
+	//rootCmd.AddCommand(projectCmd)
 
 	projectCmd.AddCommand(createCmd)
 	createCmd.Flags().StringP("file", "f", "", "Target topology file")

@@ -318,13 +318,14 @@ route-map CUSTOMER_IN permit 10
 route-map PROVIDER_IN permit 10
  set community %[1]s
  set local-preference %[2]s
-!`, provComm, provLP, peerComm, peerLP, custComm, custLP)
+!
+`, provComm, provLP, peerComm, peerLP, custComm, custLP)
 
 	sep(dst)
 }
 
 func WriteConfig(c FRRConfig) {
-	genDir := utils.GetDirectoryFromKey("config_directory", "~/.topogen")
+	genDir := utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir)
 	filename := fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname)
 	if config.VFlag {
 		fmt.Println("writing", filename)

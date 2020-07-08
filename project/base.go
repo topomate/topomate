@@ -185,7 +185,7 @@ func (p *Project) StartAll(linksFlag string) {
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
 				"%s/conf_%d_%s",
-				utils.GetDirectoryFromKey("config_dir", "~/.topogen"),
+				utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
 				asn,
 				v.Routers[i].Hostname,
 			)

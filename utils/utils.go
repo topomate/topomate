@@ -44,8 +44,11 @@ func ExecSudo(arg ...string) *exec.Cmd {
 func GetDirectoryFromKey(key, defaultPath string) string {
 	// Check if a directory is configured
 	if viper.IsSet(key) {
-		configDir := viper.GetString(key)
-
+		d := viper.GetString(key)
+		configDir, err := homedir.Expand(d)
+		if err != nil {
+			Fatalln(err)
+		}
 		stat, err := os.Stat(configDir)
 		if err == nil {
 			if !stat.IsDir() {
@@ -55,7 +58,7 @@ func GetDirectoryFromKey(key, defaultPath string) string {
 		}
 
 		if os.IsNotExist(err) { // create directory if it is not present yet
-			if e := os.Mkdir(configDir, os.ModeDir); e != nil {
+			if e := os.MkdirAll(configDir, os.ModeDir|os.ModePerm); e != nil {
 				Fatalln("GetDirectoryFromKey: error creating directory")
 			}
 			return configDir
