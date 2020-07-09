@@ -13,6 +13,7 @@ Welcome to Topomate's documentation!
    intro
    install
    quickstart
+   specs
 
 .. Indices and tables
 .. ==================
