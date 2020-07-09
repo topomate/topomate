@@ -3,8 +3,10 @@ package project
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/rahveiz/topomate/config"
 )
 
 const (
@@ -40,11 +42,36 @@ func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 	}
 }
 
-// func NewNetInterfaceExt(router *Router) *NetInterface {
-// 	res := NewNetInterface(router)
-// 	res.External = true
-// 	return res
-// }
+func (p *Project) parseExternal(k config.ExternalLink) {
+	l := &ExternalLink{
+		From: NewExtLinkItem(
+			k.From.ASN,
+			p.AS[k.From.ASN].Routers[k.From.RouterID-1],
+		),
+		To: NewExtLinkItem(
+			k.To.ASN,
+			p.AS[k.To.ASN].Routers[k.To.RouterID-1],
+		),
+	}
+	switch strings.ToLower(k.Relationship) {
+	case "p2c":
+		l.From.Relation = Provider
+		l.To.Relation = Customer
+		break
+	case "c2p":
+		l.From.Relation = Customer
+		l.To.Relation = Provider
+		break
+	case "p2p":
+		l.From.Relation = Peer
+		l.To.Relation = Peer
+		break
+	default:
+		break
+	}
+	l.setupExternal(&p.AS[k.From.ASN].Network.NextAvailable)
+	p.Ext = append(p.Ext, l)
+}
 
 func (e *ExternalLink) setupExternal(p **net.IPNet) {
 	if p == nil {

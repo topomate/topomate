@@ -55,25 +55,4 @@ autonomous_systems:
       kind: 'full-mesh'
       subnet_length: 30
 
-external_links:
-  - from:
-      asn: 1
-      router_id: 1
-    to:
-      asn: 2
-      router_id: 1
-    rel: 'p2c'
-  - from:
-      asn: 2
-      router_id: 1
-    to:
-      asn: 3
-      router_id: 1
-    rel: 'p2p'
-  - from:
-      asn: 2
-      router_id: 1
-    to:
-      asn: 4
-      router_id: 1
-    rel: 'p2c'
+external_links_file: '4as-extconf'

@@ -51,6 +51,7 @@ func ReadConfig(path string) *Project {
 	proj := &Project{
 		Name: conf.Name,
 		AS:   make(map[int]*AutonomousSystem, nbAS),
+		Ext:  make([]*ExternalLink, 0, 128),
 	}
 
 	// Iterate on AS elements from the config to fill the project
@@ -126,36 +127,20 @@ func ReadConfig(path string) *Project {
 	}
 
 	/************************** External links setup **************************/
+	if conf.External == nil {
+		if conf.ExternalFile == "" {
+			utils.Fatalln("External links setup error: please provide either a file or manual specs")
+		}
+		if filepath.IsAbs(conf.ExternalFile) {
+			proj.externalFromFile(conf.ExternalFile)
+		} else {
+			proj.externalFromFile(config.ConfigDir + "/" + conf.ExternalFile)
+		}
+	} else {
 
-	for _, k := range conf.External {
-		l := &ExternalLink{
-			From: NewExtLinkItem(
-				k.From.ASN,
-				proj.AS[k.From.ASN].Routers[k.From.RouterID-1],
-			),
-			To: NewExtLinkItem(
-				k.To.ASN,
-				proj.AS[k.To.ASN].Routers[k.To.RouterID-1],
-			),
+		for _, k := range conf.External {
+			proj.parseExternal(k)
 		}
-		switch strings.ToLower(k.Relationship) {
-		case "p2c":
-			l.From.Relation = Provider
-			l.To.Relation = Customer
-			break
-		case "c2p":
-			l.From.Relation = Customer
-			l.To.Relation = Provider
-			break
-		case "p2p":
-			l.From.Relation = Peer
-			l.To.Relation = Peer
-			break
-		default:
-			break
-		}
-		l.setupExternal(&proj.AS[k.From.ASN].Network.NextAvailable)
-		proj.Ext = append(proj.Ext, l)
 	}
 	proj.linkExternal()
 	return proj

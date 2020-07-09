@@ -7,10 +7,11 @@ const (
 )
 
 type BaseConfig struct {
-	Name     string         `yaml:"name,omitempty"`
-	Global   GlobalConfig   `yaml:"global_settings"`
-	AS       []ASConfig     `yaml:"autonomous_systems"`
-	External []ExternalLink `yaml:"external_links"`
+	Name         string         `yaml:"name,omitempty"`
+	Global       GlobalConfig   `yaml:"global_settings"`
+	AS           []ASConfig     `yaml:"autonomous_systems"`
+	ExternalFile string         `yaml:"external_links_file"`
+	External     []ExternalLink `yaml:"external_links"`
 }
 
 type GlobalConfig struct {
