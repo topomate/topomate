@@ -100,7 +100,6 @@ func (e *ExternalLink) setupExternal(p **net.IPNet) {
 	// check if we need to get next subnet
 	if assigned+2 > addrCnt {
 		prefix, _ = cidr.NextSubnet(prefix, prefixLen)
-		assigned = 0
 	}
 
 	(*p).IP = cidr.Inc(prefix.IP)

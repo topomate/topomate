@@ -25,20 +25,19 @@ import (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start a network topology",
+	Long: `Start a network topology using the provided configuration files.
+Automatically creates Docker containers, network links and FRR configuration files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
 
-		n, err := cmd.Flags().GetBool("no-generate")
-		if !n {
-			foo := frr.GenerateConfig(newConf)
-			frr.WriteAll(foo)
+		if n, err := cmd.Flags().GetBool("no-generate"); err == nil {
+			if !n {
+				foo := frr.GenerateConfig(newConf)
+				frr.WriteAll(foo)
+			}
+		} else {
+			utils.Fatalln(err)
 		}
 		links, err := cmd.Flags().GetString("links")
 		if err != nil {

@@ -33,7 +33,7 @@ import (
 // restartCmd represents the restart command
 var restartCmd = &cobra.Command{
 	Use:   "restart",
-	Short: "A brief description of your command",
+	Short: "Restart a container",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 

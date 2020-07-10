@@ -57,6 +57,9 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 		All:     true,
 		Filters: flt,
 	})
+	if err != nil {
+		utils.Fatalln(err)
+	}
 	if len(li) == 0 { // container does not exist yet
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image:           config.DockerRouterImage,
