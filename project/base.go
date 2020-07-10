@@ -20,6 +20,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Project is the main struct of topomate
 type Project struct {
 	Name     string
 	AS       map[int]*AutonomousSystem
@@ -149,6 +150,7 @@ func ReadConfig(path string) *Project {
 	return proj
 }
 
+// Print displays some informations concerning the project
 func (p *Project) Print() {
 	for n, v := range p.AS {
 		fmt.Println("->AS", n)
@@ -204,6 +206,7 @@ func (p *Project) StartAll(linksFlag string) {
 	p.saveLinks()
 }
 
+// StopAll stops all containers and removes all links
 func (p *Project) StopAll() {
 	var wg sync.WaitGroup
 	for _, v := range p.AS {
@@ -273,6 +276,7 @@ func applyFlow(brName string, links []Link) {
 	}
 }
 
+// ApplyInternalLinks creates all internal links for each AS of the project
 func (p *Project) ApplyInternalLinks() {
 
 	for n, as := range p.AS {
@@ -292,12 +296,14 @@ func (p *Project) ApplyInternalLinks() {
 	}
 }
 
+// RemoveInternalLinks removes all internal links of the project
 func (p *Project) RemoveInternalLinks() {
 	for n := range p.AS {
 		link.DeleteBridge(fmt.Sprintf("int-%d", n))
 	}
 }
 
+// ApplyExternalLinks creates all external links between the different AS
 func (p *Project) ApplyExternalLinks() {
 	for _, v := range p.Ext {
 
@@ -329,6 +335,7 @@ func (p *Project) ApplyExternalLinks() {
 	}
 }
 
+// RemoveExternalLinks removes all external links
 func (p *Project) RemoveExternalLinks() {
 	for _, v := range p.Ext {
 		brName := fmt.Sprintf("ext-%d%s-%d%s",

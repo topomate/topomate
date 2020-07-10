@@ -197,9 +197,9 @@ func GetOFPort(containerName, ifName string) (string, bool) {
 
 }
 
-// AddPort adds a port to the container, and links it with an OVS bridge
-// if hostIf in not nil, it fills the struct fields instead of adding the host side
-// to the OVS bridge
+// AddPort adds a port to the container, and links it with an OVS bridge.
+// If hostIf in not nil, it fills the struct fields. If bridge is set to false,
+// the host part is not added to the OVS bridge
 func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, hostIf *OVSInterface, bridge bool) error {
 	if _, ok := c.FindPort(ifName); ok {
 		return fmt.Errorf("AddPort: interface %s already exists in container %s", ifName, c.ContainerName)

@@ -15,6 +15,7 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+// BGPNbr represents a neighbor configuration for a given router
 type BGPNbr struct {
 	RemoteAS     int
 	UpdateSource string
@@ -25,6 +26,8 @@ type BGPNbr struct {
 	RouteMapsOut []string
 }
 
+// Router contains informations needed to configure a router.
+// It contains elements relative to the container and to the FRR configuration.
 type Router struct {
 	ID            int
 	Hostname      string
@@ -35,6 +38,9 @@ type Router struct {
 	NextInterface int
 }
 
+// StartContainer starts the container for the router. If configPath is set,
+// it also copies the configuration file from the configured directory to
+// the container
 func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -77,6 +83,7 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 
 }
 
+// StopContainer stops the router container
 func (r *Router) StopContainer(wg *sync.WaitGroup) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -91,6 +98,8 @@ func (r *Router) StopContainer(wg *sync.WaitGroup) {
 	}
 }
 
+// CopyConfig copies the configuration file configPath to the configuration
+// directory in the container file system.
 func (r *Router) CopyConfig(configPath string) {
 	_, err := exec.Command(
 		"docker",

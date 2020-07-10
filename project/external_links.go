@@ -15,6 +15,7 @@ const (
 	Peer     = iota
 )
 
+// ExternalLinkItem represents a side of an ExternalLink
 type ExternalLinkItem struct {
 	ASN       int
 	Router    *Router
@@ -22,11 +23,14 @@ type ExternalLinkItem struct {
 	Relation  int
 }
 
+// ExternalLink represents a link between 2 routers from different AS
 type ExternalLink struct {
 	From *ExternalLinkItem
 	To   *ExternalLinkItem
 }
 
+// NewExtLinkItem returns a poiter to an ExternalLinkItem based on the
+// provided informations
 func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 	ifName := fmt.Sprintf("eth%d", router.NextInterface)
 	router.NextInterface++
