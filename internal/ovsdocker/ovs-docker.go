@@ -20,9 +20,10 @@ import (
 const MPLSMAXLabels = 65535
 
 type PortSettings struct {
-	MPLS  bool
-	MTU   int
-	Speed int
+	MPLS   bool
+	MTU    int
+	Speed  int
+	OFPort int
 }
 
 type OVSDockerClient struct {
@@ -34,10 +35,10 @@ type OVSDockerClient struct {
 }
 
 type OVSInterface struct {
-	HostIface      string
-	ContainerName  string
-	ContainerIface string
-	IngressRate    string
+	HostIface      string `json:"h_if"`
+	Bridge         string `json:"br"`
+	ContainerIface string `json:"c_if"`
+	Settings       PortSettings
 }
 
 type OVSBulk map[string][]OVSInterface
@@ -197,7 +198,9 @@ func GetOFPort(containerName, ifName string) (string, bool) {
 }
 
 // AddPort adds a port to the container, and links it with an OVS bridge
-func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, hostIf *OVSInterface) error {
+// if hostIf in not nil, it fills the struct fields instead of adding the host side
+// to the OVS bridge
+func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, hostIf *OVSInterface, bridge bool) error {
 	if _, ok := c.FindPort(ifName); ok {
 		return fmt.Errorf("AddPort: interface %s already exists in container %s", ifName, c.ContainerName)
 	}
@@ -212,27 +215,28 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 
 	portHost, portCont := c.IfNames()
 
-	if hostIf == nil {
+	if bridge {
 		// Add the host end of the veth to an OVS bridge
-		if err := c.addToBridge(brName, ifName, settings.Speed); err != nil {
+		if err := c.addToBridge(brName, ifName, settings.Speed, settings.OFPort); err != nil {
 			return err
 		}
-	} else {
+	}
+	if hostIf != nil {
 		*hostIf = OVSInterface{
 			HostIface:      portHost,
 			ContainerIface: ifName,
-			ContainerName:  c.ContainerName,
-			IngressRate:    strconv.Itoa(settings.Speed * 1000),
+			Bridge:         brName,
+			Settings:       settings,
 		}
 	}
 
 	// Activate host side
-	if err := c.ExecLink("set", portHost, "up"); err != nil {
+	if err := ExecLink("set", portHost, "up"); err != nil {
 		return err
 	}
 
 	// Move container side into container
-	if err := c.ExecLink("set", portCont, "netns", c.pidToStr()); err != nil {
+	if err := ExecLink("set", portCont, "netns", c.pidToStr()); err != nil {
 		return err
 	}
 
@@ -270,7 +274,7 @@ func (c *OVSDockerClient) DeletePort(ifName string) {
 		utils.Fatalln("DeletePort:", err)
 	}
 
-	if err := c.ExecLink("delete", port); err != nil {
+	if err := ExecLink("delete", port); err != nil {
 		utils.Fatalln(err)
 	}
 }
@@ -293,7 +297,7 @@ func (c *OVSDockerClient) ExecNS(args ...string) error {
 }
 
 // ExecLink is a wrapper around the "ip link" command
-func (c *OVSDockerClient) ExecLink(args ...string) error {
+func ExecLink(args ...string) error {
 	var stderr bytes.Buffer
 	cmdArgs := []string{"ip", "link"}
 	cmdArgs = append(cmdArgs, args...)
@@ -311,10 +315,10 @@ func (c *OVSDockerClient) ExecLink(args ...string) error {
 
 func (c *OVSDockerClient) createVEth() error {
 	host, cont := c.IfNames()
-	return c.ExecLink("add", host, "type", "veth", "peer", "name", cont)
+	return ExecLink("add", host, "type", "veth", "peer", "name", cont)
 }
 
-func (c *OVSDockerClient) addToBridge(brName, ifName string, speed int) error {
+func (c *OVSDockerClient) addToBridge(brName, ifName string, speed int, ofport int) error {
 	var stderr bytes.Buffer
 	host := c.PortnameHost()
 	cmdArgs := []string{"ovs-vsctl",
@@ -323,6 +327,9 @@ func (c *OVSDockerClient) addToBridge(brName, ifName string, speed int) error {
 		"external_ids:container_id=" + c.ContainerName,
 		"external_ids:container_iface=" + ifName,
 		"ingress_policing_rate=" + strconv.Itoa(speed*1000),
+	}
+	if ofport > 0 {
+		cmdArgs = append(cmdArgs, "ofport_request="+strconv.Itoa(ofport))
 	}
 	cmd := utils.ExecSudo(cmdArgs...)
 	cmd.Stderr = &stderr
@@ -339,21 +346,25 @@ func AddToBridgeBulk(elements map[string][]OVSInterface) error {
 		size += len(v)
 	}
 
-	cmdArgs := make([]string, 1, 15*size)
+	cmdArgs := make([]string, 1, 16*size)
 	cmdArgs[0] = "ovs-vsctl"
 	for k, v := range elements {
 		for _, e := range v {
 			cmdArgs = append(cmdArgs,
-				"--", "add-port", k, e.HostIface,
+				"--", "add-port", e.Bridge, e.HostIface,
 				"--", "set", "interface", e.HostIface,
-				"external_ids:container_id="+e.ContainerName,
+				"external_ids:container_id="+k,
 				"external_ids:container_iface="+e.ContainerIface,
-				"ingress_policing_rate="+e.IngressRate,
+				"ingress_policing_rate="+strconv.Itoa(e.Settings.Speed*1000),
+				"ofport_request="+strconv.Itoa(e.Settings.OFPort),
 			)
 		}
 	}
 	cmd := utils.ExecSudo(cmdArgs...)
 	cmd.Stderr = &stderr
+	if config.VFlag {
+		fmt.Println(cmd.String())
+	}
 	if err := cmd.Run(); err != nil {
 		return errors.New(string(stderr.Bytes()))
 	}

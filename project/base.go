@@ -1,9 +1,11 @@
 package project
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,9 +21,10 @@ import (
 )
 
 type Project struct {
-	Name string
-	AS   map[int]*AutonomousSystem
-	Ext  []*ExternalLink
+	Name     string
+	AS       map[int]*AutonomousSystem
+	Ext      []*ExternalLink
+	AllLinks ovsdocker.OVSBulk
 }
 
 // ReadConfig reads a yaml file, parses it and returns a Project
@@ -183,6 +186,7 @@ func (p *Project) StartAll(linksFlag string) {
 	}
 	wg.Wait()
 
+	p.AllLinks = make(ovsdocker.OVSBulk, 1024)
 	switch strings.ToLower(linksFlag) {
 	case "internal":
 		p.ApplyInternalLinks()
@@ -197,6 +201,7 @@ func (p *Project) StartAll(linksFlag string) {
 		p.ApplyExternalLinks()
 		break
 	}
+	p.saveLinks()
 }
 
 func (p *Project) StopAll() {
@@ -213,29 +218,49 @@ func (p *Project) StopAll() {
 	wg.Wait()
 	p.RemoveInternalLinks()
 	p.RemoveExternalLinks()
+	if err := os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json"); err != nil {
+		utils.Fatalln(err)
+	}
 }
 
-func setupContainerLinks(brName string, links []Link) []ovsdocker.OVSInterface {
+func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 
 	// Create an OVS bridge
 	link.CreateBridge(brName)
 
 	// Prepare a slice for bulk add to the OVS bridge (better performances)
-	res := make([]ovsdocker.OVSInterface, 0, len(links))
+	// res := make([]ovsdocker.OVSInterface, 0, len(links))
 
+	hostIf := &ovsdocker.OVSInterface{}
+
+	settings := ovsdocker.DefaultParams()
+	settings.OFPort = 1
 	for _, v := range links {
 		idA := v.First.Router.ContainerName
 		idB := v.Second.Router.ContainerName
 		ifA := v.First.Interface.IfName
 		ifB := v.Second.Interface.IfName
 
-		hostIf := ovsdocker.OVSInterface{}
-		link.AddPortToContainer(brName, ifA, idA, &hostIf)
-		res = append(res, hostIf)
-		link.AddPortToContainer(brName, ifB, idB, &hostIf)
-		res = append(res, hostIf)
+		settings.Speed = v.First.Interface.Speed
+
+		link.AddPortToContainer(brName, ifA, idA, settings, hostIf, false)
+		// res = append(res, *hostIf)
+		if _, ok := m[idA]; !ok {
+			m[idA] = make([]ovsdocker.OVSInterface, 0, len(links))
+		}
+		m[idA] = append(m[idA], *hostIf)
+		settings.OFPort++
+
+		settings.Speed = v.Second.Interface.Speed
+		link.AddPortToContainer(brName, ifB, idB, settings, hostIf, false)
+		// res = append(res, *hostIf)
+		if _, ok := m[idB]; !ok {
+			m[idB] = make([]ovsdocker.OVSInterface, 0, len(links))
+		}
+		m[idB] = append(m[idB], *hostIf)
+		settings.OFPort++
 	}
-	return res
+	// return res
 }
 
 func applyFlow(brName string, links []Link) {
@@ -250,18 +275,15 @@ func applyFlow(brName string, links []Link) {
 
 func (p *Project) ApplyInternalLinks() {
 
-	// Create a map for bulk add to OVS bridge
-	bulk := make(ovsdocker.OVSBulk, len(p.AS))
-
 	for n, as := range p.AS {
 		// Create bridge with name "int-<ASN>"
 		brName := fmt.Sprintf("int-%d", n)
 		// Setup container links
-		bulk[brName] = setupContainerLinks(brName, as.Links)
+		setupContainerLinks(brName, as.Links, p.AllLinks)
 	}
 
 	// Link host interfaces to OVS bridges
-	ovsdocker.AddToBridgeBulk(bulk)
+	ovsdocker.AddToBridgeBulk(p.AllLinks)
 
 	// Apply OpenFlow rules to the bridges
 	for n, as := range p.AS {
@@ -287,9 +309,23 @@ func (p *Project) ApplyExternalLinks() {
 		)
 
 		link.CreateBridge(brName)
+		settings := ovsdocker.DefaultParams()
+		hostIf := ovsdocker.OVSInterface{}
 
-		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, nil)
-		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, nil)
+		settings.Speed = v.From.Interface.Speed
+		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, settings, &hostIf, true)
+		if _, ok := p.AllLinks[v.From.Router.ContainerName]; !ok {
+			p.AllLinks[v.From.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+		}
+		p.AllLinks[v.From.Router.ContainerName] = append(p.AllLinks[v.From.Router.ContainerName], hostIf)
+
+		settings.Speed = v.To.Interface.Speed
+		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, settings, &hostIf, true)
+
+		if _, ok := p.AllLinks[v.To.Router.ContainerName]; !ok {
+			p.AllLinks[v.To.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+		}
+		p.AllLinks[v.To.Router.ContainerName] = append(p.AllLinks[v.To.Router.ContainerName], hostIf)
 	}
 }
 
@@ -381,4 +417,18 @@ func getRouteMaps(relation int, inMaps []string, outMaps []string) ([]string, []
 	}
 
 	return append(in, inMaps...), append(out, outMaps...)
+}
+
+func (p *Project) saveLinks() {
+	// Save the interfaces configuration in json for restarts
+	j, err := json.Marshal(p.AllLinks)
+	if err != nil {
+		utils.Fatalln(err)
+	}
+	f, err := os.Create(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
+	if err != nil {
+		utils.Fatalln(err)
+	}
+	defer f.Close()
+	f.Write(j)
 }

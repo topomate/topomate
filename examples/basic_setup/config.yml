@@ -1,7 +1,7 @@
 name: "foobar"
 autonomous_systems:
   - asn: 10
-    routers: 4
+    routers: 8
     loopback_start: '172.16.10.1/32'
     igp: OSPF
     redistribute_igp: true
@@ -11,7 +11,7 @@ autonomous_systems:
       kind: 'full-mesh'
       subnet_length: 30
   - asn: 20
-    routers: 2
+    routers: 6
     loopback_start: '172.16.20.1/32'
     igp: OSPF
     redistribute_igp: true
