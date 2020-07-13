@@ -17,11 +17,12 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 	configs := make([][]FRRConfig, len(p.AS))
 	idx := 0
 	for i, as := range p.AS {
-		n := len(as.Routers)
+		n := as.TotalContainers()
 		is4 := as.Network.IPNet.IP.To4() != nil
 
 		configs[idx] = make([]FRRConfig, n)
-		for j, r := range as.Routers {
+		j := 0
+		for _, r := range as.Routers {
 			c := FRRConfig{
 				Hostname:     r.Hostname,
 				Interfaces:   make(map[string]IfConfig, n),
@@ -122,6 +123,74 @@ func GenerateConfig(p *project.Project) [][]FRRConfig {
 			}
 
 			configs[idx][j] = c
+			j++
+		}
+
+		// VPNS
+		for _, vpn := range as.VPN {
+			for _, r := range vpn.Customers {
+				c := FRRConfig{
+					Hostname:     r.Hostname,
+					Interfaces:   make(map[string]IfConfig, n),
+					StaticRoutes: make(staticRoutes, len(r.Links)),
+				}
+
+				// IGP
+				igp := strings.ToUpper(as.IGP)
+				switch igp {
+				case "OSPF":
+					// Check if we need to setup OSPFv2 or OSPFv3
+					if is4 {
+						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID))
+					} else {
+						c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
+					}
+					if as.RedistributeIGP {
+						c.BGP.Redistribute.OSPF = true
+					}
+					break
+				case "IS-IS", "ISIS":
+					if as.RedistributeIGP {
+						c.BGP.Redistribute.ISIS = true
+					}
+					c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2))
+				default:
+					break
+				}
+
+				// Interfaces
+				for _, iface := range r.Links {
+					ifCfg := IfConfig{
+						IPs:         []net.IPNet{iface.IP},
+						Description: iface.Description,
+						Speed:       iface.Speed,
+						IGPConfig:   make([]IGPIfConfig, 0, 5),
+					}
+					switch igp {
+					case "OSPF":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, OSPFIfConfig{
+								V6:        !is4,
+								Cost:      iface.Cost,
+								ProcessID: 0,
+								Area:      0,
+							})
+					case "ISIS", "IS-IS":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, ISISIfConfig{
+								V6:          !is4,
+								ProcessName: isisDefaultProcess,
+								Cost:        iface.Cost,
+								CircuitType: 2,
+							})
+						break
+					}
+					c.Interfaces[iface.IfName] = ifCfg
+				}
+
+				configs[idx][j] = c
+				j++
+			}
 		}
 		idx++
 	}
@@ -326,7 +395,12 @@ route-map PROVIDER_IN permit 10
 
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir)
-	filename := fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname)
+	var filename string
+	if c.BGP.ASN == 0 {
+		filename = fmt.Sprintf("%s/conf_cust_%s", genDir, c.Hostname)
+	} else {
+		filename = fmt.Sprintf("%s/conf_%d_%s", genDir, c.BGP.ASN, c.Hostname)
+	}
 	if config.VFlag {
 		fmt.Println("writing", filename)
 	}
@@ -353,9 +427,10 @@ service integrated-vtysh-config
 
 	writeStatic(dst, c.StaticRoutes)
 
-	writeBGP(dst, c.BGP)
-
-	writeRelationsMaps(dst, c.BGP.ASN)
+	if c.BGP.ASN > 0 {
+		writeBGP(dst, c.BGP)
+		writeRelationsMaps(dst, c.BGP.ASN)
+	}
 
 	for _, igp := range c.IGP {
 		switch igp.(type) {

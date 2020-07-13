@@ -38,6 +38,16 @@ type ASConfig struct {
 	LoRange         string        `yaml:"loopback_start,omitempty"`
 	Links           InternalLinks `yaml:"links,omitempty"`
 	MPLS            bool          `yaml:"mpls,omitempty"`
+	VPN             []VPNConfig
+}
+
+type VPNConfig struct {
+	VRF       string `yaml:"vrf"`
+	Customers []struct {
+		Hostname string `yaml:"hostname"`
+		Subnet   string `yaml:"subnet"`
+		Parent   int    `yaml:"parent"`
+	} `yaml:"customers"`
 }
 
 type ExternalLinkItem struct {

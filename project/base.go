@@ -128,17 +128,48 @@ func ReadConfig(path string) *Project {
 		a.ReserveSubnets(k.Links.SubnetLength)
 		a.linkRouters()
 
+		/*********************** Customer routers setup ***********************/
+		a.VPN = make([]VPN, len(k.VPN))
+		for idx, vpn := range k.VPN {
+			a.VPN[idx].VRF = vpn.VRF
+			a.VPN[idx].Customers = make([]*Router, len(vpn.Customers))
+			for i, v := range vpn.Customers {
+				_, n, err := net.ParseCIDR(v.Subnet)
+				if err != nil {
+					utils.Fatalln(err)
+				}
+				n.IP = cidr.Inc(n.IP)
+				a.VPN[idx].Customers[i] = &Router{
+					ID:            i + 1,
+					Hostname:      v.Hostname,
+					Links:         make([]*NetInterface, 1),
+					ContainerName: fmt.Sprintf("AS%d-Cust-%s", k.ASN, v.Hostname),
+				}
+				l := Link{
+					First:  NewLinkItem(a.Routers[v.Parent-1]),
+					Second: NewLinkItem(a.VPN[idx].Customers[i]),
+				}
+				l.First.Interface.IP = *n
+				l.First.Interface.Description =
+					fmt.Sprintf("linked to customer %s\n", v.Hostname)
+				n.IP = cidr.Inc(n.IP)
+				l.Second.Interface.IP = *n
+
+				a.Routers[v.Parent-1].Links = append(a.Routers[v.Parent-1].Links, l.First.Interface)
+				a.VPN[idx].Customers[i].Links[0] = l.Second.Interface
+				a.Links = append(a.Links, l)
+			}
+		}
 	}
 
 	/************************** External links setup **************************/
 	if conf.External == nil {
-		if conf.ExternalFile == "" {
-			utils.Fatalln("External links setup error: please provide either a file or manual specs")
-		}
-		if filepath.IsAbs(conf.ExternalFile) {
-			proj.externalFromFile(conf.ExternalFile)
-		} else {
-			proj.externalFromFile(config.ConfigDir + "/" + conf.ExternalFile)
+		if conf.ExternalFile != "" {
+			if filepath.IsAbs(conf.ExternalFile) {
+				proj.externalFromFile(conf.ExternalFile)
+			} else {
+				proj.externalFromFile(config.ConfigDir + "/" + conf.ExternalFile)
+			}
 		}
 	} else {
 
@@ -163,6 +194,14 @@ func (p *Project) Print() {
 				fmt.Println(b)
 			}
 		}
+		for _, vpn := range v.VPN {
+			fmt.Println("===", vpn.VRF)
+			for _, r := range vpn.Customers {
+				for _, l := range r.Links {
+					fmt.Println(l)
+				}
+			}
+		}
 	}
 }
 
@@ -171,7 +210,8 @@ func (p *Project) Print() {
 func (p *Project) StartAll(linksFlag string) {
 	var wg sync.WaitGroup
 	for asn, v := range p.AS {
-		wg.Add(len(v.Routers))
+		wg.Add(v.TotalContainers())
+		// Create containers for provider routers
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
 				"%s/conf_%d_%s",
@@ -182,11 +222,29 @@ func (p *Project) StartAll(linksFlag string) {
 			go func(r Router, wg *sync.WaitGroup, path string) {
 				r.StartContainer(nil, path)
 				wg.Done()
-
 			}(*v.Routers[i], &wg, configPath)
+		}
+
+		// Create containers for customers
+		for i := 0; i < len(v.VPN); i++ {
+			for j := 0; j < len(v.VPN[i].Customers); j++ {
+				configPath := fmt.Sprintf(
+					"%s/conf_cust_%s",
+					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+					v.VPN[i].Customers[j].Hostname,
+				)
+				go func(r Router, wg *sync.WaitGroup, path string) {
+					r.StartContainer(nil, path)
+					wg.Done()
+				}(*v.VPN[i].Customers[j], &wg, configPath)
+			}
 		}
 	}
 	wg.Wait()
+
+	if config.VFlag {
+		fmt.Println("Applying links with OVS...")
+	}
 
 	p.AllLinks = make(ovsdocker.OVSBulk, 1024)
 	switch strings.ToLower(linksFlag) {
@@ -209,21 +267,41 @@ func (p *Project) StartAll(linksFlag string) {
 // StopAll stops all containers and removes all links
 func (p *Project) StopAll() {
 	var wg sync.WaitGroup
-	for _, v := range p.AS {
-		wg.Add(len(v.Routers))
+	for asn, v := range p.AS {
+		wg.Add(v.TotalContainers())
+		// Provider
 		for i := 0; i < len(v.Routers); i++ {
-			go func(r Router, wg *sync.WaitGroup) {
-				r.StopContainer(nil)
+			configPath := fmt.Sprintf(
+				"%s/conf_%d_%s",
+				utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+				asn,
+				v.Routers[i].Hostname,
+			)
+			go func(r Router, wg *sync.WaitGroup, path string) {
+				r.StopContainer(nil, path)
 				wg.Done()
-			}(*v.Routers[i], &wg)
+			}(*v.Routers[i], &wg, configPath)
+		}
+
+		// Customers
+		for i := 0; i < len(v.VPN); i++ {
+			for j := 0; j < len(v.VPN[i].Customers); j++ {
+				configPath := fmt.Sprintf(
+					"%s/conf_cust_%s",
+					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+					v.VPN[i].Customers[j].Hostname,
+				)
+				go func(r Router, wg *sync.WaitGroup, path string) {
+					r.StopContainer(nil, path)
+					wg.Done()
+				}(*v.VPN[i].Customers[j], &wg, configPath)
+			}
 		}
 	}
 	wg.Wait()
 	p.RemoveInternalLinks()
 	p.RemoveExternalLinks()
-	if err := os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json"); err != nil {
-		utils.Fatalln(err)
-	}
+	os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
 }
 
 func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
@@ -278,14 +356,12 @@ func applyFlow(brName string, links []Link) {
 
 // ApplyInternalLinks creates all internal links for each AS of the project
 func (p *Project) ApplyInternalLinks() {
-
 	for n, as := range p.AS {
 		// Create bridge with name "int-<ASN>"
 		brName := fmt.Sprintf("int-%d", n)
 		// Setup container links
 		setupContainerLinks(brName, as.Links, p.AllLinks)
 	}
-
 	// Link host interfaces to OVS bridges
 	ovsdocker.AddToBridgeBulk(p.AllLinks)
 

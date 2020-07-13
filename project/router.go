@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os/exec"
 	"sync"
@@ -61,13 +62,23 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 		utils.Fatalln(err)
 	}
 	if len(li) == 0 { // container does not exist yet
+		hostCfg := &container.HostConfig{
+			CapAdd: []string{"SYS_ADMIN", "NET_ADMIN"},
+		}
+		// if configPath != "" {
+		// 	hostCfg.Mounts = []mount.Mount{
+		// 		{
+		// 			Type:   mount.TypeBind,
+		// 			Source: configPath,
+		// 			Target: "/etc/frr/frr.conf",
+		// 		},
+		// 	}
+		// }
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image:           config.DockerRouterImage,
 			Hostname:        r.Hostname,
 			NetworkDisabled: true, // docker networking disabled as we use OVS
-		}, &container.HostConfig{
-			CapAdd: []string{"SYS_ADMIN", "NET_ADMIN"},
-		}, nil, nil, r.ContainerName)
+		}, hostCfg, nil, nil, r.ContainerName)
 		utils.Check(err)
 		containerID = resp.ID
 	} else { // container exists
@@ -84,16 +95,24 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 		panic(err)
 	}
 
+	if config.VFlag {
+		fmt.Println(r.ContainerName, "started.")
+	}
+
 }
 
 // StopContainer stops the router container
-func (r *Router) StopContainer(wg *sync.WaitGroup) {
+func (r *Router) StopContainer(wg *sync.WaitGroup, configPath string) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	utils.Check(err)
 
 	if wg != nil {
 		defer wg.Done()
+	}
+
+	if configPath != "" {
+		r.SaveConfig(configPath)
 	}
 
 	if err := cli.ContainerStop(ctx, r.ContainerName, nil); err != nil {
@@ -109,6 +128,18 @@ func (r *Router) CopyConfig(configPath string) {
 		"cp",
 		configPath,
 		r.ContainerName+":/etc/frr/frr.conf",
+	).CombinedOutput()
+	if err != nil {
+		utils.Fatalln(err)
+	}
+}
+
+func (r *Router) SaveConfig(configPath string) {
+	_, err := exec.Command(
+		"docker",
+		"cp",
+		r.ContainerName+":/etc/frr/frr.conf",
+		configPath,
 	).CombinedOutput()
 	if err != nil {
 		utils.Fatalln(err)

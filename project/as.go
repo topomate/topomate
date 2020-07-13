@@ -12,6 +12,11 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+type VPN struct {
+	VRF       string
+	Customers []*Router
+}
+
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
 	ASN             int
@@ -22,6 +27,7 @@ type AutonomousSystem struct {
 	LoStart         net.IPNet
 	Routers         []*Router
 	Links           []Link
+	VPN             []VPN
 }
 
 func (a *AutonomousSystem) getContainerName(n interface{}) string {
@@ -62,6 +68,16 @@ func (a AutonomousSystem) getRouter(n interface{}) *Router {
 	}
 
 	return a.Routers[idx-1]
+}
+
+// TotalContainres returns the total number of containers needed for the AS
+// (= P + PE + CE)
+func (a *AutonomousSystem) TotalContainers() int {
+	res := len(a.Routers)
+	for _, v := range a.VPN {
+		res += len(v.Customers)
+	}
+	return res
 }
 
 // SetupLinks generates the L2 configuration based on provided config
