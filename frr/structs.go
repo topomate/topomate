@@ -81,6 +81,7 @@ type RouteRedistribution struct {
 	OSPF      bool
 	Connected bool
 	ISIS      bool
+	BGP       bool
 }
 
 type IGPIfConfig interface {

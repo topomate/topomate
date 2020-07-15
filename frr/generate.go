@@ -163,6 +163,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						},
 						Redistribute: RouteRedistribution{
 							Connected: true,
+							OSPF:      true,
 						},
 					}
 				}
@@ -179,7 +180,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						// Add IGP on the parent side (parent index in array is
 						// its ID - 1, as usual)
 						parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0,
-							RouteRedistribution{Connected: true})
+							RouteRedistribution{Connected: true, BGP: true})
 						parentIGP.VRF = vpn.VRF
 						parentCfg.IGP = append(
 							parentCfg.IGP,
@@ -336,7 +337,6 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 	sep(dst)
 
 	for vrf, cfg := range c.VRF {
-		fmt.Fprintln(dst, "vrf", vrf)
 		fmt.Fprintln(dst, "router bgp", c.ASN, "vrf", vrf)
 		fmt.Fprintln(dst, " address-family ipv4 unicast")
 		fmt.Fprintf(dst, "  rd vpn export %d:%d\n", c.ASN, cfg.RD)

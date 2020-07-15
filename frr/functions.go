@@ -29,6 +29,9 @@ func (r RouteRedistribution) Write(w io.Writer, indent int) {
 	if r.ISIS {
 		writeWithIndent(w, indent, "redistribute isis")
 	}
+	if r.BGP {
+		writeWithIndent(w, indent, "redistribute bgp")
+	}
 }
 
 func (c *FRRConfig) internalIfs() map[string]IfConfig {

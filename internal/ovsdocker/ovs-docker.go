@@ -251,17 +251,18 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
-	if settings.MPLS {
-		if err := c.ExecNS("sysctl", "-w", "net.mpls.conf."+ifName+".input=1"); err != nil {
-			return err
-		}
+	if err := c.ExecNS("sysctl", "-w", "net.mpls.conf."+ifName+".input=1"); err != nil {
+		return err
+	}
 
-		if err := c.ExecNS("sysctl", "-w", "net.mpls.conf.platform_labels="+strconv.Itoa(MPLSMAXLabels)); err != nil {
-			return err
-		}
+	if err := c.ExecNS("sysctl", "-w", "net.mpls.platform_labels="+strconv.Itoa(MPLSMAXLabels)); err != nil {
+		return err
 	}
 
 	if err := c.ExecNS("sysctl", "-w", "net.ipv4.tcp_l3mdev_accept=1"); err != nil {
+		return err
+	}
+	if err := c.ExecNS("sysctl", "-w", "net.ipv4.udp_l3mdev_accept=1"); err != nil {
 		return err
 	}
 

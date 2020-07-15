@@ -43,7 +43,7 @@ Automatically creates Docker containers, network links and FRR configuration fil
 		if err != nil {
 			utils.Fatalln(err)
 		}
-		utils.PullImages()
+		// utils.PullImages()
 		newConf.StartAll(links)
 	},
 }
