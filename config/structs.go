@@ -45,6 +45,7 @@ type VPNConfig struct {
 	VRF       string `yaml:"vrf"`
 	Customers []struct {
 		Hostname string `yaml:"hostname"`
+		Loopback string `yaml:"loopback"`
 		Subnet   string `yaml:"subnet"`
 		Parent   int    `yaml:"parent"`
 	} `yaml:"customers"`

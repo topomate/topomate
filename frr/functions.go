@@ -78,6 +78,10 @@ func (c ISISIfConfig) Write(dst io.Writer) {
 }
 
 func (c OSPFIfConfig) Write(dst io.Writer) {
-	fmt.Fprintln(dst, " ip ospf area", c.Area)
+	if c.ProcessID > 0 {
+		fmt.Fprintf(dst, " ip ospf %d area %d\n", c.ProcessID, c.Area)
+	} else {
+		fmt.Fprintln(dst, " ip ospf area", c.Area)
+	}
 	fmt.Fprintln(dst, " bandwidth", c.Cost)
 }

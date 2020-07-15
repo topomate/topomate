@@ -111,7 +111,7 @@ func ReadConfig(path string) *Project {
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
 				NextInterface: 0,
-				Neighbors:     make(map[string]BGPNbr, k.NumRouters+nbAS),
+				Neighbors:     make(map[string]*BGPNbr, k.NumRouters+nbAS),
 			}
 
 			// Generate loopback address if needed
@@ -132,34 +132,47 @@ func ReadConfig(path string) *Project {
 		a.VPN = make([]VPN, len(k.VPN))
 		for idx, vpn := range k.VPN {
 			a.VPN[idx].VRF = vpn.VRF
-			a.VPN[idx].Customers = make([]*Router, len(vpn.Customers))
+			a.VPN[idx].Customers = make([]VPNCustomer, len(vpn.Customers))
+			a.VPN[idx].Neighbors = make(map[string]bool, len(vpn.Customers))
 			for i, v := range vpn.Customers {
 				_, n, err := net.ParseCIDR(v.Subnet)
 				if err != nil {
 					utils.Fatalln(err)
 				}
 				n.IP = cidr.Inc(n.IP)
-				a.VPN[idx].Customers[i] = &Router{
+				router := &Router{
 					ID:            i + 1,
 					Hostname:      v.Hostname,
 					Links:         make([]*NetInterface, 1),
 					ContainerName: fmt.Sprintf("AS%d-Cust-%s", k.ASN, v.Hostname),
 				}
+				if v.Loopback != "" {
+					if _, n, err := net.ParseCIDR(v.Loopback); err == nil {
+						router.Loopback = append(router.Loopback, *n)
+					}
+				}
+				parentRouter := a.Routers[v.Parent-1]
+				a.VPN[idx].Customers[i].Router = router
+				a.VPN[idx].Customers[i].Parent = parentRouter
+				a.VPN[idx].Neighbors[parentRouter.LoID()] = true
 				l := Link{
-					First:  NewLinkItem(a.Routers[v.Parent-1]),
-					Second: NewLinkItem(a.VPN[idx].Customers[i]),
+					First:  NewLinkItem(parentRouter),
+					Second: NewLinkItem(router),
 				}
 				l.First.Interface.IP = *n
 				l.First.Interface.Description =
-					fmt.Sprintf("linked to customer %s\n", v.Hostname)
+					fmt.Sprintf("linked to customer %s", v.Hostname)
+				l.First.Interface.External = true // not exactly part of the AS
+				l.First.Interface.VRF = vpn.VRF
 				n.IP = cidr.Inc(n.IP)
 				l.Second.Interface.IP = *n
 
-				a.Routers[v.Parent-1].Links = append(a.Routers[v.Parent-1].Links, l.First.Interface)
-				a.VPN[idx].Customers[i].Links[0] = l.Second.Interface
+				parentRouter.Links = append(parentRouter.Links, l.First.Interface)
+				router.Links[0] = l.Second.Interface
 				a.Links = append(a.Links, l)
 			}
 		}
+		a.linkVPN()
 	}
 
 	/************************** External links setup **************************/
@@ -190,14 +203,16 @@ func (p *Project) Print() {
 			for _, l := range r.Links {
 				fmt.Println(l)
 			}
-			for _, b := range r.Neighbors {
-				fmt.Println(b)
+			for id, b := range r.Neighbors {
+				fmt.Println(id, b)
 			}
 		}
 		for _, vpn := range v.VPN {
 			fmt.Println("===", vpn.VRF)
+			fmt.Println(vpn.Neighbors)
 			for _, r := range vpn.Customers {
-				for _, l := range r.Links {
+				fmt.Println(r.Router.Loopback)
+				for _, l := range r.Router.Links {
 					fmt.Println(l)
 				}
 			}
@@ -231,12 +246,12 @@ func (p *Project) StartAll(linksFlag string) {
 				configPath := fmt.Sprintf(
 					"%s/conf_cust_%s",
 					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
-					v.VPN[i].Customers[j].Hostname,
+					v.VPN[i].Customers[j].Router.Hostname,
 				)
 				go func(r Router, wg *sync.WaitGroup, path string) {
 					r.StartContainer(nil, path)
 					wg.Done()
-				}(*v.VPN[i].Customers[j], &wg, configPath)
+				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
 		}
 	}
@@ -289,12 +304,12 @@ func (p *Project) StopAll() {
 				configPath := fmt.Sprintf(
 					"%s/conf_cust_%s",
 					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
-					v.VPN[i].Customers[j].Hostname,
+					v.VPN[i].Customers[j].Router.Hostname,
 				)
 				go func(r Router, wg *sync.WaitGroup, path string) {
 					r.StopContainer(nil, path)
 					wg.Done()
-				}(*v.VPN[i].Customers[j], &wg, configPath)
+				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
 		}
 	}
@@ -323,6 +338,7 @@ func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 		ifB := v.Second.Interface.IfName
 
 		settings.Speed = v.First.Interface.Speed
+		settings.VRF = v.First.Interface.VRF
 
 		link.AddPortToContainer(brName, ifA, idA, settings, hostIf, false)
 		// res = append(res, *hostIf)
@@ -333,6 +349,7 @@ func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 		settings.OFPort++
 
 		settings.Speed = v.Second.Interface.Speed
+		settings.VRF = v.Second.Interface.VRF
 		link.AddPortToContainer(brName, ifB, idB, settings, hostIf, false)
 		// res = append(res, *hostIf)
 		if _, ok := m[idB]; !ok {
@@ -451,7 +468,7 @@ func (p *Project) linkExternal() {
 
 		rmIn, rmOut := getRouteMaps(lnk.To.Relation, nil, nil)
 		// Add an entry in the neighbors table
-		lnk.From.Router.Neighbors[toID] = BGPNbr{
+		lnk.From.Router.Neighbors[toID] = &BGPNbr{
 			RemoteAS:     lnk.To.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -467,7 +484,7 @@ func (p *Project) linkExternal() {
 			append(lnk.To.Router.Links, lnk.To.Interface)
 
 		rmIn, rmOut = getRouteMaps(lnk.From.Relation, nil, nil)
-		lnk.To.Router.Neighbors[fromID] = BGPNbr{
+		lnk.To.Router.Neighbors[fromID] = &BGPNbr{
 			RemoteAS:     lnk.From.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,

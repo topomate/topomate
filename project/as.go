@@ -12,9 +12,15 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+type VPNCustomer struct {
+	Router *Router
+	Parent *Router
+}
+
 type VPN struct {
 	VRF       string
-	Customers []*Router
+	Customers []VPNCustomer
+	Neighbors map[string]bool
 }
 
 // AutonomousSystem represents an AS in a Project
@@ -78,6 +84,26 @@ func (a *AutonomousSystem) TotalContainers() int {
 		res += len(v.Customers)
 	}
 	return res
+}
+
+func (a *AutonomousSystem) GetMatchingLink(first, second *NetInterface) *NetInterface {
+	if first != nil && second != nil {
+		return nil
+	}
+	if first != nil {
+		for _, v := range a.Links {
+			if v.First.Interface == first {
+				return v.Second.Interface
+			}
+		}
+	} else {
+		for _, v := range a.Links {
+			if v.Second.Interface == second {
+				return v.First.Interface
+			}
+		}
+	}
+	return nil
 }
 
 // SetupLinks generates the L2 configuration based on provided config
@@ -153,21 +179,78 @@ func (a *AutonomousSystem) linkRouters() {
 			append(first.Router.Links, first.Interface)
 
 		// Add an entry in the neighbors table
-		first.Router.Neighbors[secondID] = BGPNbr{
+		first.Router.Neighbors[secondID] = &BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  true,
+			AF:           AddressFamily{IPv4: true},
 		}
 
 		// Do the same thing for the second part of the link
 		second.Router.Links =
 			append(second.Router.Links, second.Interface)
-		second.Router.Neighbors[firstID] = BGPNbr{
+		second.Router.Neighbors[firstID] = &BGPNbr{
 			RemoteAS:     a.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
 			NextHopSelf:  true,
+			AF:           AddressFamily{IPv4: true},
+		}
+	}
+}
+
+func (a *AutonomousSystem) linkVPN() {
+	for _, lnk := range a.Links {
+
+		first := lnk.First
+		second := lnk.Second
+
+		// Replace it by the loopback address if present
+		firstID := first.Router.LoID()
+		secondID := second.Router.LoID()
+
+		// Add neighbors for VPN
+		for _, vpn := range a.VPN {
+			if _, ok := vpn.Neighbors[firstID]; ok {
+				for id := range vpn.Neighbors {
+					if id == firstID {
+						continue
+					}
+					nbr, ok := first.Router.Neighbors[id]
+					if ok {
+						nbr.AF.VPNv4 = true
+					} else {
+						first.Router.Neighbors[id] = &BGPNbr{
+							RemoteAS:     a.ASN,
+							UpdateSource: "lo",
+							ConnCheck:    false,
+							NextHopSelf:  false,
+							AF:           AddressFamily{VPNv4: true},
+						}
+					}
+				}
+			}
+			// Check if current router is present
+			if _, ok := vpn.Neighbors[secondID]; ok {
+				for id := range vpn.Neighbors {
+					if id == secondID {
+						continue
+					}
+					nbr, ok := second.Router.Neighbors[id]
+					if ok {
+						nbr.AF.VPNv4 = true
+					} else {
+						second.Router.Neighbors[id] = &BGPNbr{
+							RemoteAS:     a.ASN,
+							UpdateSource: "lo",
+							ConnCheck:    false,
+							NextHopSelf:  false,
+							AF:           AddressFamily{VPNv4: true},
+						}
+					}
+				}
+			}
 		}
 	}
 }

@@ -23,6 +23,7 @@ type FRRConfig struct {
 	IGP          []interface{}
 	MPLS         bool
 	StaticRoutes map[string][]string
+	nextOSPF     int
 }
 
 type IfConfig struct {
@@ -31,6 +32,7 @@ type IfConfig struct {
 	IGPConfig   []IGPIfConfig
 	Speed       int
 	External    bool
+	VRF         string
 }
 
 type BGPNbr project.BGPNbr
@@ -42,6 +44,18 @@ type BGPConfig struct {
 	Networks     []string
 	Networks6    []string
 	Redistribute RouteRedistribution
+	VRF          map[string]VRFConfig
+}
+
+type VRFConfig struct {
+	RD           int
+	RT           RouteTarget
+	Redistribute RouteRedistribution
+}
+
+type RouteTarget struct {
+	In  int
+	Out int
 }
 
 type ISISConfig struct {
@@ -52,6 +66,7 @@ type ISISConfig struct {
 
 type OSPFConfig struct {
 	ProcessID    int
+	VRF          string
 	Redistribute RouteRedistribution
 	RouterID     string
 }

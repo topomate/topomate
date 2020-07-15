@@ -24,6 +24,7 @@ type PortSettings struct {
 	MTU    int
 	Speed  int
 	OFPort int
+	VRF    string
 }
 
 type OVSDockerClient struct {
@@ -256,6 +257,19 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		}
 
 		if err := c.ExecNS("sysctl", "-w", "net.mpls.conf.platform_labels="+strconv.Itoa(MPLSMAXLabels)); err != nil {
+			return err
+		}
+	}
+
+	if err := c.ExecNS("sysctl", "-w", "net.ipv4.tcp_l3mdev_accept=1"); err != nil {
+		return err
+	}
+
+	if settings.VRF != "" {
+		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", "100")
+		c.ExecNS("ip", "link", "set", settings.VRF, "up")
+
+		if err := c.ExecNS("ip", "link", "set", ifName, "vrf", settings.VRF); err != nil {
 			return err
 		}
 	}

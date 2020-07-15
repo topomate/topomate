@@ -16,6 +16,13 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+type AddressFamily struct {
+	IPv4  bool
+	IPv6  bool
+	VPNv4 bool
+	VPNv6 bool
+}
+
 // BGPNbr represents a neighbor configuration for a given router
 type BGPNbr struct {
 	RemoteAS     int
@@ -25,6 +32,7 @@ type BGPNbr struct {
 	IfName       string
 	RouteMapsIn  []string
 	RouteMapsOut []string
+	AF           AddressFamily
 }
 
 // Router contains informations needed to configure a router.
@@ -35,8 +43,15 @@ type Router struct {
 	ContainerName string
 	Loopback      []net.IPNet
 	Links         []*NetInterface
-	Neighbors     map[string]BGPNbr
+	Neighbors     map[string]*BGPNbr
 	NextInterface int
+}
+
+func (r *Router) LoID() string {
+	if len(r.Loopback) == 0 {
+		return ""
+	}
+	return r.Loopback[0].IP.String()
 }
 
 // StartContainer starts the container for the router. If configPath is set,

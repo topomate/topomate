@@ -21,6 +21,7 @@ type NetInterface struct {
 	Speed       int
 	External    bool
 	Cost        int
+	VRF         string
 }
 
 type LinkItem struct {
