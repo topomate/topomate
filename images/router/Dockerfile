@@ -1,4 +1,4 @@
-FROM frrouting/frr:7.3.1
+FROM frrouting/frr:v7.3.1
 
 ADD daemons /etc/frr/daemons
 ADD vtysh.conf /etc/frr/vtysh.conf
