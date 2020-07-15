@@ -72,7 +72,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 			case "OSPF":
 				// Check if we need to setup OSPFv2 or OSPFv3
 				if is4 {
-					c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 1, RouteRedistribution{
+					c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
 						Connected: true,
 					}))
 					c.nextOSPF = 2
@@ -108,7 +108,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							append(ifCfg.IGPConfig, OSPFIfConfig{
 								V6:        !is4,
 								Cost:      iface.Cost,
-								ProcessID: 1,
+								ProcessID: 0,
 								Area:      0,
 							})
 					case "ISIS", "IS-IS":
@@ -172,19 +172,19 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				case "OSPF":
 					// Check if we need to setup OSPFv2 or OSPFv3
 					if is4 {
-						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 1, RouteRedistribution{
+						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
 							Connected: true,
 						}))
 
 						// Add IGP on the parent side (parent index in array is
 						// its ID - 1, as usual)
-						// parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0,
-						// 	RouteRedistribution{})
-						// parentIGP.VRF = vpn.VRF
-						// parentCfg.IGP = append(
-						// 	parentCfg.IGP,
-						// 	parentIGP,
-						// )
+						parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0,
+							RouteRedistribution{Connected: true})
+						parentIGP.VRF = vpn.VRF
+						parentCfg.IGP = append(
+							parentCfg.IGP,
+							parentIGP,
+						)
 						// parentCfg.nextOSPF++
 					} else {
 						c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
@@ -201,7 +201,6 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				default:
 					break
 				}
-
 				// Interfaces
 				for _, iface := range r.Router.Links {
 					ifCfg := IfConfig{
@@ -216,7 +215,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							append(ifCfg.IGPConfig, OSPFIfConfig{
 								V6:        !is4,
 								Cost:      iface.Cost,
-								ProcessID: 1,
+								ProcessID: 0,
 								Area:      0,
 							})
 						if parentIf := as.GetMatchingLink(nil, iface); parentIf != nil {
@@ -231,7 +230,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							pIfCfg.IGPConfig = append(pIfCfg.IGPConfig, OSPFIfConfig{
 								V6:        !is4,
 								Cost:      parentIf.Cost,
-								ProcessID: 1,
+								ProcessID: 0,
 								Area:      0,
 							})
 
@@ -369,13 +368,13 @@ func writeOSPF(dst io.Writer, c OSPFConfig) {
 
 	if c.ProcessID > 0 {
 		fmt.Fprint(dst, "router ospf ", c.ProcessID)
-		if c.VRF != "" {
-			fmt.Fprintln(dst, " vrf", c.VRF)
-		} else {
-			fmt.Fprint(dst, "\n")
-		}
 	} else {
-		fmt.Fprintln(dst, "router ospf")
+		fmt.Fprint(dst, "router ospf")
+	}
+	if c.VRF != "" {
+		fmt.Fprintln(dst, " vrf", c.VRF)
+	} else {
+		fmt.Fprint(dst, "\n")
 	}
 	// if c.RouterID != "" {
 	// 	fmt.Fprintln(dst, " ospf router-id", c.RouterID)
@@ -527,6 +526,7 @@ frr defaults traditional
 hostname %s
 log syslog informational
 service integrated-vtysh-config
+password topomate
 `, c.Hostname)
 	sep(dst)
 
