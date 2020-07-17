@@ -43,7 +43,13 @@ Automatically creates Docker containers, network links and FRR configuration fil
 		if err != nil {
 			utils.Fatalln(err)
 		}
-		// utils.PullImages()
+		if nopull, err := cmd.Flags().GetBool("no-pull"); err == nil {
+			if !nopull {
+				utils.PullImages()
+			}
+		} else {
+			utils.Fatalln(err)
+		}
 		newConf.StartAll(links)
 	},
 }
@@ -54,6 +60,7 @@ func init() {
 	startCmd.Flags().IntSliceVar(&config.ASOnly, "as", nil, "Start only specified AS")
 	startCmd.Flags().String("links", "all", `Restrict which links should be applied (all, internal, external, none). Defaults to all.`)
 	startCmd.Flags().Bool("no-generate", false, "Do not generate configuration files")
+	startCmd.Flags().Bool("no-pull", false, "Do not pull docker image from DockerHub.")
 
 	// Here you will define your flags and configuration settings.
 
