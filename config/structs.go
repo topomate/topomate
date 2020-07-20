@@ -36,9 +36,27 @@ type ASConfig struct {
 	RedistributeIGP bool          `yaml:"redistribute_igp"`
 	Prefix          string        `yaml:"prefix,omitempty"`
 	LoRange         string        `yaml:"loopback_start,omitempty"`
+	BGP             BGPConfig     `yaml:"bgp"`
 	Links           InternalLinks `yaml:"links,omitempty"`
 	MPLS            bool          `yaml:"mpls,omitempty"`
 	VPN             []VPNConfig
+}
+
+// type IBGPConfig struct {
+// 	File string `yaml:"file"`
+// }
+
+type IBGPConfig struct {
+	Manual bool
+	RR     []struct {
+		Router  int   `yaml:"router"`
+		Clients []int `yaml:"clients,flow"`
+	} `yaml:"route_reflectors"`
+	Cliques [][]int `yaml:"cliques,flow"`
+}
+
+type BGPConfig struct {
+	IBGP IBGPConfig `yaml:"ibgp"`
 }
 
 type VPNConfig struct {

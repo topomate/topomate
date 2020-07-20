@@ -27,3 +27,4 @@ external_links:
     to:
       asn: 20
       router_id: 2
+    rel: 'p2c'

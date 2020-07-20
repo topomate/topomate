@@ -88,3 +88,49 @@ func (c OSPFIfConfig) Write(dst io.Writer) {
 	}
 	fmt.Fprintln(dst, " bandwidth", c.Cost)
 }
+
+func (c ISISConfig) writeRedistribution(w io.Writer, af string, level string) {
+	if c.Redistribute.Connected {
+		fmt.Fprintln(w, " redistribute", af, "connected", level)
+	}
+	if c.Redistribute.Static {
+		fmt.Fprintln(w, " redistribute", af, "static", level)
+	}
+	if c.Redistribute.OSPF {
+		fmt.Fprintln(w, " redistribute", af, "ospf", level)
+	}
+	if c.Redistribute.BGP {
+		fmt.Fprintln(w, " redistribute", af, "bgp", level)
+	}
+}
+
+func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
+	if v4 {
+		switch c.Type {
+		case 1:
+			c.writeRedistribution(dst, "ipv4", "level-1")
+			break
+		case 2:
+			c.writeRedistribution(dst, "ipv4", "level-2")
+			break
+		default:
+			c.writeRedistribution(dst, "ipv4", "level-1")
+			c.writeRedistribution(dst, "ipv4", "level-2")
+		}
+	}
+	if v6 {
+		if v4 {
+			switch c.Type {
+			case 1:
+				c.writeRedistribution(dst, "ipv6", "level-1")
+				break
+			case 2:
+				c.writeRedistribution(dst, "ipv6", "level-2")
+				break
+			default:
+				c.writeRedistribution(dst, "ipv6", "level-1")
+				c.writeRedistribution(dst, "ipv6", "level-2")
+			}
+		}
+	}
+}
