@@ -1,0 +1,41 @@
+name: 'RR'
+
+global_settings:
+
+autonomous_systems:
+  - asn: 420
+    routers: 6
+    loopback_start: '192.168.1.1/32'
+    igp: OSPF
+    redistribute_igp: true
+    prefix: '10.1.1.0/24'
+    bgp:
+      ibgp:
+        manual: true
+        route_reflectors:
+          - router: 4
+            clients: [1,2,3]
+        cliques:
+          - [4,5,6]
+    links:
+      kind: 'manual'
+      subnet_length: 30
+      file: 'internalconf'
+  - asn: 421
+    routers: 3
+    loopback_start: '172.16.1.1/32'
+    igp: 'IS-IS'
+    redistribute_igp: true
+    prefix: '192.168.100.0/24'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+
+external_links:
+  - from:
+      asn: 421
+      router_id: 1
+    to:
+      asn: 420
+      router_id: 5
+    rel: 'p2c'

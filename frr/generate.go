@@ -87,7 +87,10 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				if as.RedistributeIGP {
 					c.BGP.Redistribute.ISIS = true
 				}
-				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2))
+				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2, RouteRedistribution{
+					Connected: true,
+				}))
+				break
 			default:
 				break
 			}
@@ -198,7 +201,18 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					if as.RedistributeIGP {
 						c.BGP.Redistribute.ISIS = true
 					}
-					c.IGP = append(c.IGP, getISISConfig(r.Router.Loopback[0].IP, 1, 2))
+					c.IGP = append(c.IGP,
+						getISISConfig(r.Router.Loopback[0].IP, 1, 2, RouteRedistribution{
+							Connected: true,
+						}))
+					parentIGP := getISISConfig(parentCfg.Interfaces["lo"].IPs[0].IP, 1, 2,
+						RouteRedistribution{Connected: true, BGP: true})
+					parentIGP.VRF = vpn.VRF
+					parentCfg.IGP = append(
+						parentCfg.IGP,
+						parentIGP,
+					)
+					break
 				default:
 					break
 				}
@@ -308,12 +322,18 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 					fmt.Fprintln(&af4, "  neighbor", ip, "route-map", m, "out")
 				}
 			}
+			if v.RRClient {
+				fmt.Fprintln(&af4, "  neighbor", ip, "route-reflector-client")
+			}
 		}
 
 		// address-family ipv4 vpn
 		if v.AF.VPNv4 {
 			fmt.Fprintln(&vpn4, "  neighbor", ip, "activate")
 			fmt.Fprintln(&vpn4, "  neighbor", ip, "send-community extended")
+			if v.RRClient {
+				fmt.Fprintln(&af4, "  neighbor", ip, "route-reflector-client")
+			}
 		}
 	}
 
@@ -330,9 +350,11 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 
 	fmt.Fprintln(dst, " !")
 
-	fmt.Fprintln(dst, " address-family ipv4 vpn")
-	fmt.Fprint(dst, vpn4.String())
-	fmt.Fprintln(dst, " exit-address-family")
+	if vpn4.Len() > 0 {
+		fmt.Fprintln(dst, " address-family ipv4 vpn")
+		fmt.Fprint(dst, vpn4.String())
+		fmt.Fprintln(dst, " exit-address-family")
+	}
 
 	sep(dst)
 
@@ -359,6 +381,9 @@ func writeISIS(dst io.Writer, c ISISConfig) {
 	fmt.Fprintln(dst, " net", c.ISO)
 	fmt.Fprintln(dst, " metric-style wide")
 	fmt.Fprintln(dst, " is-type", isisTypeString(c.Type))
+
+	// Here we write the redistribution manually as ISIS syntax is not standard
+	c.writeRedistribute(dst, true, false)
 
 	sep(dst)
 }
@@ -597,10 +622,11 @@ func getOSPF6Config(routerID string) OSPF6Config {
 
 /* IS-IS */
 
-func getISISConfig(ip net.IP, area, t int) ISISConfig {
+func getISISConfig(ip net.IP, area, t int, distrib RouteRedistribution) ISISConfig {
 	cfg := ISISConfig{
-		ProcessName: isisDefaultProcess,
-		Type:        t,
+		ProcessName:  isisDefaultProcess,
+		Type:         t,
+		Redistribute: distrib,
 	}
 	ip = ip.To4()
 	if ip == nil {

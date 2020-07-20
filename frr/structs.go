@@ -59,9 +59,11 @@ type RouteTarget struct {
 }
 
 type ISISConfig struct {
-	ProcessName string
-	ISO         string
-	Type        int
+	ProcessName  string
+	ISO          string
+	Type         int
+	Redistribute RouteRedistribution
+	VRF          string
 }
 
 type OSPFConfig struct {

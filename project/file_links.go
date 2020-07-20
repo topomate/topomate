@@ -20,7 +20,11 @@ func (a *AutonomousSystem) internalFromFile(path string) []Link {
 	current := 0
 	for scanner.Scan() {
 		current++
-		fields := strings.Fields(scanner.Text())
+		line := scanner.Text()
+		if line[:1] == "#" {
+			continue
+		}
+		fields := strings.Fields(line)
 		l := Link{
 			First:  NewLinkItem(a.getRouter(fields[0])),
 			Second: NewLinkItem(a.getRouter(fields[1])),
@@ -67,7 +71,11 @@ func (p *Project) externalFromFile(path string) {
 	current := 0
 	for scanner.Scan() {
 		current++
-		fields := strings.Fields(scanner.Text())
+		line := scanner.Text()
+		if line[:1] == "#" {
+			continue
+		}
+		fields := strings.Fields(line)
 
 		from := strings.SplitN(fields[0], ".", 2)
 		to := strings.SplitN(fields[1], ".", 2)

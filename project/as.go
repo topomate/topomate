@@ -12,6 +12,14 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+// type iBGPYaml struct {
+// 	RR []struct {
+// 		Router  int   `yaml:"router"`
+// 		Clients []int `yaml:"clients,flow"`
+// 	} `yaml:"route_reflectors"`
+// 	Cliques [][]int `yaml:"cliques,flow"`
+// }
+
 type VPNCustomer struct {
 	Router *Router
 	Parent *Router
@@ -111,12 +119,15 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 	switch kind := strings.ToLower(cfg.Kind); kind {
 	case "manual":
 		a.Links = a.SetupManual(cfg)
+		break
 	case "ring":
 		a.Links = a.SetupRing(cfg)
+		break
 	case "full-mesh":
 		a.Links = a.SetupFullMesh(cfg)
+		break
 	default:
-		fmt.Println("Not implemented")
+		break
 	}
 }
 
@@ -157,7 +168,7 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 	}
 }
 
-func (a *AutonomousSystem) linkRouters() {
+func (a *AutonomousSystem) linkRouters(ibgp bool) {
 	for _, lnk := range a.Links {
 		first := lnk.First
 		second := lnk.Second
@@ -178,24 +189,25 @@ func (a *AutonomousSystem) linkRouters() {
 		first.Router.Links =
 			append(first.Router.Links, first.Interface)
 
-		// Add an entry in the neighbors table
-		first.Router.Neighbors[secondID] = &BGPNbr{
-			RemoteAS:     a.ASN,
-			UpdateSource: "lo",
-			ConnCheck:    false,
-			NextHopSelf:  true,
-			AF:           AddressFamily{IPv4: true},
-		}
-
-		// Do the same thing for the second part of the link
 		second.Router.Links =
 			append(second.Router.Links, second.Interface)
-		second.Router.Neighbors[firstID] = &BGPNbr{
-			RemoteAS:     a.ASN,
-			UpdateSource: "lo",
-			ConnCheck:    false,
-			NextHopSelf:  true,
-			AF:           AddressFamily{IPv4: true},
+
+		// Add an entry in the neighbors table if no ibgp configuration is specified
+		if ibgp {
+			first.Router.Neighbors[secondID] = &BGPNbr{
+				RemoteAS:     a.ASN,
+				UpdateSource: "lo",
+				ConnCheck:    false,
+				NextHopSelf:  true,
+				AF:           AddressFamily{IPv4: true},
+			}
+			second.Router.Neighbors[firstID] = &BGPNbr{
+				RemoteAS:     a.ASN,
+				UpdateSource: "lo",
+				ConnCheck:    false,
+				NextHopSelf:  true,
+				AF:           AddressFamily{IPv4: true},
+			}
 		}
 	}
 }
@@ -253,4 +265,71 @@ func (a *AutonomousSystem) linkVPN() {
 			}
 		}
 	}
+}
+
+func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
+	// ibgpConfig := {}
+	// var path string
+	// if filepath.IsAbs(cfg.File) {
+	// 	path = cfg.File
+	// } else {
+	// 	path = config.ConfigDir + "/" + cfg.File
+	// }
+	// data, err := ioutil.ReadFile(path)
+	// if err != nil {
+	// 	utils.Fatalln(err)
+	// }
+	// if err := yaml.Unmarshal(data, &ibgpConfig); err != nil {
+	// 	utils.Fatalln(err)
+	// }
+
+	// Setup route reflectors and clients
+	for _, r := range ibgpConfig.RR {
+		routeReflector := a.getRouter(r.Router)
+		for _, c := range r.Clients {
+			client := a.getRouter(c)
+			routeReflector.Neighbors[client.LoID()] = &BGPNbr{
+				RemoteAS:     a.ASN,
+				UpdateSource: "lo",
+				RRClient:     true,
+				NextHopSelf:  true,
+				AF:           AddressFamily{IPv4: true},
+			}
+			client.Neighbors[routeReflector.LoID()] = &BGPNbr{
+				RemoteAS:     a.ASN,
+				UpdateSource: "lo",
+				AF:           AddressFamily{IPv4: true},
+			}
+		}
+	}
+
+	// Setup iBGP cliques
+	for _, clique := range ibgpConfig.Cliques {
+		// For each router of the clique, add all other routers to its neighbors
+		for i := 0; i < len(clique); i++ {
+			router := a.getRouter(clique[i])
+			for j := 0; j < len(clique); j++ {
+				// Skip if i == j (same router)
+				if i == j {
+					continue
+				}
+				n := a.getRouter(clique[j])
+				router.Neighbors[n.LoID()] = &BGPNbr{
+					RemoteAS:     a.ASN,
+					UpdateSource: "lo",
+					NextHopSelf:  true,
+					AF:           AddressFamily{IPv4: true},
+				}
+			}
+		}
+	}
+
+	// &BGPNbr{
+	// 	RemoteAS:     a.ASN,
+	// 	UpdateSource: "lo",
+	// 	ConnCheck:    false,
+	// 	NextHopSelf:  true,
+	// 	AF:           AddressFamily{IPv4: true},
+	// }
+
 }

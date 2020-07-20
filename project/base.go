@@ -89,6 +89,10 @@ func ReadConfig(path string) *Project {
 			}
 			a.Network = Net{
 				IPNet: n,
+				NextAvailable: &net.IPNet{
+					IP:   cidr.Inc(n.IP),
+					Mask: n.Mask,
+				},
 			}
 		}
 
@@ -126,7 +130,12 @@ func ReadConfig(path string) *Project {
 		a.SetupLinks(k.Links)
 
 		a.ReserveSubnets(k.Links.SubnetLength)
-		a.linkRouters()
+		if !k.BGP.IBGP.Manual {
+			a.linkRouters(true)
+		} else {
+			a.linkRouters(false)
+			a.setupIBGP(k.BGP.IBGP)
+		}
 
 		/*********************** Customer routers setup ***********************/
 		a.VPN = make([]VPN, len(k.VPN))
@@ -476,6 +485,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.From.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			AF:           AddressFamily{IPv4: true},
 		}
 
 		// Do the same thing for the second part of the link
@@ -492,6 +502,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.To.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			AF:           AddressFamily{IPv4: true},
 		}
 	}
 }
