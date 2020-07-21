@@ -41,6 +41,7 @@ func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 			IfName:   ifName,
 			IP:       net.IPNet{},
 			Speed:    10000,
+			Cost:     10000,
 			External: true,
 		},
 	}

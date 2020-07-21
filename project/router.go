@@ -34,6 +34,7 @@ type BGPNbr struct {
 	RouteMapsOut []string
 	AF           AddressFamily
 	RRClient     bool
+	RSClient     bool
 }
 
 // Router contains informations needed to configure a router.

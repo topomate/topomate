@@ -12,6 +12,7 @@ type BaseConfig struct {
 	AS           []ASConfig     `yaml:"autonomous_systems"`
 	ExternalFile string         `yaml:"external_links_file"`
 	External     []ExternalLink `yaml:"external_links"`
+	IXPs         []IXPConfig    `yaml:"ixps"`
 }
 
 type GlobalConfig struct {
@@ -86,4 +87,11 @@ type InternalLinks struct {
 	Preset       string              `yaml:"preset,omitempty"`
 	Specs        []map[string]string `yaml:"specs,omitempty"`
 	Filepath     string              `yaml:"file"`
+}
+
+type IXPConfig struct {
+	ASN      int      `yaml:"asn"`
+	Peers    []string `yaml:"peers,flow"`
+	Prefix   string   `yaml:"prefix"`
+	Loopback string   `yaml:"loopback"`
 }

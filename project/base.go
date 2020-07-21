@@ -25,6 +25,7 @@ type Project struct {
 	Name     string
 	AS       map[int]*AutonomousSystem
 	Ext      []*ExternalLink
+	IXPs     []IXP
 	AllLinks ovsdocker.OVSBulk
 }
 
@@ -200,6 +201,12 @@ func ReadConfig(path string) *Project {
 		}
 	}
 	proj.linkExternal()
+
+	/******************************* IXP setup *******************************/
+	proj.IXPs = make([]IXP, len(conf.IXPs))
+	for i, ixpCfg := range conf.IXPs {
+		proj.IXPs[i] = proj.parseIXPConfig(ixpCfg)
+	}
 	return proj
 }
 
@@ -225,6 +232,14 @@ func (p *Project) Print() {
 					fmt.Println(l)
 				}
 			}
+		}
+	}
+
+	for _, ixp := range p.IXPs {
+		fmt.Println("=> IXP", ixp.ASN)
+		fmt.Println(ixp.RouteServer.Loopback[0])
+		for _, l := range ixp.Links {
+			fmt.Println(*l.Interface)
 		}
 	}
 }

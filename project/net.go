@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"math"
 	"net"
+
+	"github.com/apparentlymart/go-cidr/cidr"
 )
 
 type Net struct {
@@ -63,4 +65,11 @@ func (n Net) Size() int {
 // Hosts returns a slice of hosts in a network
 func (n Net) Hosts() []net.IP {
 	return n.AllIPs()[1 : n.Size()-1]
+}
+
+// NextIP returns the current NextAvailable IPNet, then increments the IP by one
+func (n *Net) NextIP() net.IPNet {
+	res := *n.NextAvailable
+	n.NextAvailable.IP = cidr.Inc(n.NextAvailable.IP)
+	return res
 }
