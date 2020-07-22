@@ -322,6 +322,7 @@ func (p *Project) StartAll(linksFlag string) {
 // StopAll stops all containers and removes all links
 func (p *Project) StopAll() {
 	var wg sync.WaitGroup
+	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
 		wg.Add(v.TotalContainers())
 		// Provider
@@ -353,9 +354,16 @@ func (p *Project) StopAll() {
 			}
 		}
 	}
+	for i := 0; i < len(p.IXPs); i++ {
+		go func(r Router, wg *sync.WaitGroup, path string) {
+			r.StopContainer(nil, path)
+			wg.Done()
+		}(*p.IXPs[i].RouteServer, &wg, "")
+	}
 	wg.Wait()
 	p.RemoveInternalLinks()
 	p.RemoveExternalLinks()
+	p.RemoteIXPLinks()
 	os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
 }
 
