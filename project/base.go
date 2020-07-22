@@ -248,6 +248,7 @@ func (p *Project) Print() {
 // present the configuration directory, and apply links
 func (p *Project) StartAll(linksFlag string) {
 	var wg sync.WaitGroup
+	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
 		wg.Add(v.TotalContainers())
 		// Create containers for provider routers
@@ -279,6 +280,18 @@ func (p *Project) StartAll(linksFlag string) {
 			}
 		}
 	}
+	// Create containers for IXPs
+	for i := 0; i < len(p.IXPs); i++ {
+		// configPath := fmt.Sprintf(
+		// 	"%s/conf_cust_%s",
+		// 	utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+		// 	p.IXPs[i].RouteServer.Hostname,
+		// )
+		go func(r Router, wg *sync.WaitGroup, path string) {
+			r.StartContainer(nil, path)
+			wg.Done()
+		}(*p.IXPs[i].RouteServer, &wg, "")
+	}
 	wg.Wait()
 
 	if config.VFlag {
@@ -286,18 +299,21 @@ func (p *Project) StartAll(linksFlag string) {
 	}
 
 	p.AllLinks = make(ovsdocker.OVSBulk, 1024)
+	// currently, internal links must be applied in priority
 	switch strings.ToLower(linksFlag) {
 	case "internal":
 		p.ApplyInternalLinks()
 		break
 	case "external":
 		p.ApplyExternalLinks()
+		p.ApplyIXPLinks()
 		break
 	case "none":
 		break
 	default:
 		p.ApplyInternalLinks()
 		p.ApplyExternalLinks()
+		p.ApplyIXPLinks()
 		break
 	}
 	p.saveLinks()

@@ -20,7 +20,6 @@ import (
 const MPLSMAXLabels = 65535
 
 type PortSettings struct {
-	MPLS   bool
 	MTU    int
 	Speed  int
 	OFPort int
@@ -46,7 +45,6 @@ type OVSBulk map[string][]OVSInterface
 
 func DefaultParams() PortSettings {
 	return PortSettings{
-		MPLS:  false,
 		MTU:   1500,
 		Speed: 10000,
 	}
@@ -246,7 +244,7 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
-	// Activate container side
+	// Activate container side and enable MPLS
 	if err := c.ExecNS("ip", "link", "set", ifName, "up"); err != nil {
 		return err
 	}
@@ -266,6 +264,7 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
+	// Add a VRF in needed
 	if settings.VRF != "" {
 		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", "100")
 		c.ExecNS("ip", "link", "set", settings.VRF, "up")

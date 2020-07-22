@@ -8,6 +8,8 @@ import (
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/internal/link"
+	"github.com/rahveiz/topomate/internal/ovsdocker"
 	"github.com/rahveiz/topomate/utils"
 )
 
@@ -119,5 +121,35 @@ func (ixp *IXP) linkIXP() {
 			AF:           AddressFamily{IPv4: true},
 			RSClient:     true,
 		}
+	}
+}
+
+func (p *Project) ApplyIXPLinks() {
+	for _, ixp := range p.IXPs {
+		brName := fmt.Sprintf("ixp-%d", ixp.ASN)
+		link.CreateBridge(brName)
+
+		for _, lnk := range ixp.Links {
+			settings := ovsdocker.DefaultParams()
+			hostIf := ovsdocker.OVSInterface{}
+
+			settings.Speed = lnk.Interface.Speed
+			link.AddPortToContainer(brName,
+				lnk.Interface.IfName,
+				lnk.Router.ContainerName,
+				settings, &hostIf, true)
+			if _, ok := p.AllLinks[lnk.Router.ContainerName]; !ok {
+				p.AllLinks[lnk.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+			}
+			p.AllLinks[lnk.Router.ContainerName] = append(p.AllLinks[lnk.Router.ContainerName], hostIf)
+		}
+
+	}
+}
+
+func (p *Project) RemoteIXPLinks() {
+	for _, ixp := range p.IXPs {
+		brName := fmt.Sprintf("ixp-%d", ixp.ASN)
+		link.DeleteBridge(brName)
 	}
 }
