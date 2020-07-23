@@ -5,11 +5,11 @@ set -e
 chown -R frr:frr /etc/frr
 
 sleep 1
-/etc/init.d/frr start
+/usr/lib/frr/frrinit.sh start
 
 # Restart to be sure everything is up-to-date
 sleep 1
-/etc/init.d/frr restart
+/usr/lib/frr/frrinit.sh restart
 
 # Sleep forever
 exec tail -f /dev/null
