@@ -39,6 +39,16 @@ func ExecSudo(arg ...string) *exec.Cmd {
 	return exec.Command("sudo", arg...)
 }
 
+func ExecDocker(cName string, arg ...string) {
+	args := []string{"exec", cName}
+	args = append(args, arg...)
+	out, err := exec.Command("docker", args...).CombinedOutput()
+	if err != nil {
+		fmt.Println(args)
+		Fatalln(string(out), err)
+	}
+}
+
 // GetDirectoryFromKey returns the directory name specified by the given key
 // in the configuration file, and creates it if it does not exists
 func GetDirectoryFromKey(key, defaultPath string) string {

@@ -189,8 +189,8 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							Out: 1,
 						},
 						Redistribute: RouteRedistribution{
-							Connected: true,
-							OSPF:      true,
+							//Connected: true,
+							OSPF: true,
 						},
 					}
 				}
@@ -201,13 +201,16 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					// Check if we need to setup OSPFv2 or OSPFv3
 					if is4 {
 						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
-							Connected: true,
+							// Connected: true,
 						}))
 
 						// Add IGP on the parent side (parent index in array is
 						// its ID - 1, as usual)
 						parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0,
-							RouteRedistribution{Connected: true, BGP: true})
+							RouteRedistribution{
+								//Connected: true,
+								BGP: true,
+							})
 						parentIGP.VRF = vpn.VRF
 						parentCfg.IGP = append(
 							parentCfg.IGP,
@@ -230,7 +233,10 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							// Connected: true,
 						}))
 					parentIGP := getISISConfig(parentCfg.Interfaces["lo"].IPs[0].IP, 1, 2,
-						RouteRedistribution{Connected: true, BGP: true})
+						RouteRedistribution{
+							//Connected: true,
+							BGP: true,
+						})
 					parentIGP.VRF = vpn.VRF
 					parentCfg.IGP = append(
 						parentCfg.IGP,
@@ -286,6 +292,29 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						break
 					}
 					c.Interfaces[iface.IfName] = ifCfg
+				}
+
+				// Also add IGP config for loopback interface
+				if nbLo > 0 {
+					ifCfg := c.Interfaces["lo"]
+					switch igp {
+					case "OSPF":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, OSPFIfConfig{
+								V6:        !is4,
+								ProcessID: 0,
+								Area:      0,
+							})
+					case "ISIS", "IS-IS":
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, ISISIfConfig{
+								V6:          !is4,
+								ProcessName: isisDefaultProcess,
+								Passive:     true,
+							})
+						break
+					}
+					c.Interfaces["lo"] = ifCfg
 				}
 
 				configs[idx][j] = c

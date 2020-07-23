@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -z $1 ]
+then
+    delay=5
+else
+    delay=$1
+fi
+
+(sleep $delay && vtysh -b && echo "success at $(date)" > /var/log/reload.log)&

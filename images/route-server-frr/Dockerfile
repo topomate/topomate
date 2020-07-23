@@ -12,6 +12,8 @@ RUN touch /var/log/frr.log && chown frr:frr /var/log/frr.log
 
 ADD daemons /etc/frr/daemons
 ADD vtysh.conf /etc/frr/vtysh.conf
+ADD delayed-reload /usr/bin/delayed-reload
+RUN chmod +x /usr/bin/delayed-reload
 
 COPY docker-start /usr/sbin/docker-start
 RUN chmod +x /usr/sbin/docker-start

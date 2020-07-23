@@ -249,9 +249,14 @@ func (p *Project) Print() {
 // present the configuration directory, and apply links
 func (p *Project) StartAll(linksFlag string) {
 	var wg sync.WaitGroup
+
+	reloadReady := make(chan struct{}) // will be used to trigger a config reload
+	wgTotal := len(p.IXPs)
 	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
-		wg.Add(v.TotalContainers())
+		totalContainers := v.TotalContainers()
+		wg.Add(totalContainers)
+		wgTotal += totalContainers
 		// Create containers for provider routers
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
@@ -262,6 +267,9 @@ func (p *Project) StartAll(linksFlag string) {
 			)
 			go func(r Router, wg *sync.WaitGroup, path string) {
 				r.StartContainer(nil, path)
+				wg.Done()
+				<-reloadReady // wait until links are applied
+				r.ReloadConfig()
 				wg.Done()
 			}(*v.Routers[i], &wg, configPath)
 		}
@@ -277,6 +285,9 @@ func (p *Project) StartAll(linksFlag string) {
 				go func(r Router, wg *sync.WaitGroup, path string) {
 					r.StartContainer(nil, path)
 					wg.Done()
+					<-reloadReady // wait until links are applied
+					r.ReloadConfig()
+					wg.Done()
 				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
 		}
@@ -291,6 +302,9 @@ func (p *Project) StartAll(linksFlag string) {
 		)
 		go func(r Router, wg *sync.WaitGroup, path string) {
 			r.StartContainer(nil, path)
+			wg.Done()
+			<-reloadReady // wait until links are applied
+			r.ReloadConfig()
 			wg.Done()
 		}(*p.IXPs[i].RouteServer, &wg, configPath)
 	}
@@ -318,7 +332,10 @@ func (p *Project) StartAll(linksFlag string) {
 		p.ApplyIXPLinks()
 		break
 	}
+	wg.Add(wgTotal)
+	close(reloadReady) // trigger configuration reload
 	p.saveLinks()
+	wg.Wait()
 }
 
 // StopAll stops all containers and removes all links

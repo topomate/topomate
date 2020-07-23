@@ -70,6 +70,6 @@ func restartContainer(name string) {
 		c.VSwitch.DeletePort(v.Bridge, v.HostIface)
 		d.Portname = strings.TrimSuffix(v.HostIface, "_l")
 		d.AddPort(v.Bridge, v.ContainerIface, v.Settings, nil, true)
+		utils.ExecDocker(d.ContainerName, "delayed-reload")
 	}
-
 }

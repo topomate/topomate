@@ -90,7 +90,9 @@ func (c OSPFIfConfig) Write(dst io.Writer) {
 	} else {
 		fmt.Fprintln(dst, " ip ospf area", c.Area)
 	}
-	fmt.Fprintln(dst, " bandwidth", c.Cost)
+    if c.Cost > 0 {
+	    fmt.Fprintln(dst, " bandwidth", c.Cost)
+    }
 }
 
 func (c ISISConfig) writeRedistribution(w io.Writer, af string, level string) {

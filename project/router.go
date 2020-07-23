@@ -167,3 +167,16 @@ func (r *Router) SaveConfig(configPath string) {
 		utils.Fatalln(err)
 	}
 }
+
+func (r *Router) ReloadConfig() {
+	out, err := exec.Command(
+		"docker",
+		"exec",
+		r.ContainerName,
+		"vtysh",
+		"-b",
+	).CombinedOutput()
+	if err != nil {
+		utils.Fatalln(string(out), err)
+	}
+}
