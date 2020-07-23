@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+chown -R frr:frr /etc/frr
+
+sleep 1
+/etc/init.d/frr start
+
+# Restart to be sure everything is up-to-date
+sleep 1
+/etc/init.d/frr restart
+
+# Sleep forever
+exec tail -f /dev/null
