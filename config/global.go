@@ -6,7 +6,10 @@ var ConfigDir string
 
 var DefaultBGPSettings GlobalBGPConfig
 
-const DockerRouterImage = "topomate/router"
+const (
+	DockerRouterImage = "topomate/router"
+	DockerRSImage     = "topomate/route-server"
+)
 
 const (
 	DefaultDir        = "~/topomate"

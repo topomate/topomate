@@ -7,6 +7,7 @@ import (
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/utils"
 )
 
 const (
@@ -48,14 +49,20 @@ func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 }
 
 func (p *Project) parseExternal(k config.ExternalLink) {
+	if _, ok := p.AS[k.From.ASN]; !ok {
+		utils.Fatalf("External link error : AS%d does not exist\n", k.From.ASN)
+	}
+	if _, ok := p.AS[k.To.ASN]; !ok {
+		utils.Fatalf("External link error : AS%d does not exist\n", k.To.ASN)
+	}
 	l := &ExternalLink{
 		From: NewExtLinkItem(
 			k.From.ASN,
-			p.AS[k.From.ASN].Routers[k.From.RouterID-1],
+			p.AS[k.From.ASN].getRouter(k.From.RouterID),
 		),
 		To: NewExtLinkItem(
 			k.To.ASN,
-			p.AS[k.To.ASN].Routers[k.To.RouterID-1],
+			p.AS[k.To.ASN].getRouter(k.To.RouterID),
 		),
 	}
 	switch strings.ToLower(k.Relationship) {

@@ -77,7 +77,11 @@ func (c ISISIfConfig) Write(dst io.Writer) {
 	}
 	fmt.Fprintln(dst, ipver, "router isis", c.ProcessName)
 
-	fmt.Fprintln(dst, " isis circuit-type", isisTypeString(c.CircuitType))
+	if !c.Passive {
+		fmt.Fprintln(dst, " isis circuit-type", isisTypeString(c.CircuitType))
+	} else {
+		fmt.Fprintln(dst, " isis passive")
+	}
 }
 
 func (c OSPFIfConfig) Write(dst io.Writer) {

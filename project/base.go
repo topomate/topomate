@@ -206,6 +206,7 @@ func ReadConfig(path string) *Project {
 	proj.IXPs = make([]IXP, len(conf.IXPs))
 	for i, ixpCfg := range conf.IXPs {
 		proj.IXPs[i] = proj.parseIXPConfig(ixpCfg)
+		proj.IXPs[i].linkIXP()
 	}
 	return proj
 }
@@ -282,15 +283,16 @@ func (p *Project) StartAll(linksFlag string) {
 	}
 	// Create containers for IXPs
 	for i := 0; i < len(p.IXPs); i++ {
-		// configPath := fmt.Sprintf(
-		// 	"%s/conf_cust_%s",
-		// 	utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
-		// 	p.IXPs[i].RouteServer.Hostname,
-		// )
+		configPath := fmt.Sprintf(
+			"%s/conf_%d_%s",
+			utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+			p.IXPs[i].ASN,
+			p.IXPs[i].RouteServer.Hostname,
+		)
 		go func(r Router, wg *sync.WaitGroup, path string) {
 			r.StartContainer(nil, path)
 			wg.Done()
-		}(*p.IXPs[i].RouteServer, &wg, "")
+		}(*p.IXPs[i].RouteServer, &wg, configPath)
 	}
 	wg.Wait()
 

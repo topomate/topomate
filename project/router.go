@@ -43,6 +43,7 @@ type Router struct {
 	ID            int
 	Hostname      string
 	ContainerName string
+	CustomImage   string
 	Loopback      []net.IPNet
 	Links         []*NetInterface
 	Neighbors     map[string]*BGPNbr
@@ -91,8 +92,12 @@ func (r *Router) StartContainer(wg *sync.WaitGroup, configPath string) {
 		// 		},
 		// 	}
 		// }
+		image := config.DockerRouterImage
+		if r.CustomImage != "" {
+			image = r.CustomImage
+		}
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
-			Image:           config.DockerRouterImage,
+			Image:           image,
 			Hostname:        r.Hostname,
 			NetworkDisabled: true, // docker networking disabled as we use OVS
 		}, hostCfg, nil, nil, r.ContainerName)

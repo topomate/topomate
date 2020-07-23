@@ -14,7 +14,7 @@ import (
 )
 
 func GenerateConfig(p *project.Project) [][]*FRRConfig {
-	configs := make([][]*FRRConfig, len(p.AS))
+	configs := make([][]*FRRConfig, len(p.AS)+1)
 	idx := 0
 	for i, as := range p.AS {
 		n := as.TotalContainers()
@@ -38,7 +38,8 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					ips[idx] = ip
 				}
 				c.Interfaces["lo"] = IfConfig{
-					IPs: ips,
+					IPs:       ips,
+					IGPConfig: make([]IGPIfConfig, 0, 5),
 				}
 			}
 
@@ -73,7 +74,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				// Check if we need to setup OSPFv2 or OSPFv3
 				if is4 {
 					c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
-						Connected: true,
+						// Connected: true,
 					}))
 					c.nextOSPF = 2
 				} else {
@@ -88,7 +89,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					c.BGP.Redistribute.ISIS = true
 				}
 				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2, RouteRedistribution{
-					Connected: true,
+					// Connected: true,
 				}))
 				break
 			default:
@@ -126,6 +127,29 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					}
 				}
 				c.Interfaces[iface.IfName] = ifCfg
+			}
+
+			// Also add IGP config for loopback interface
+			if nbLo > 0 {
+				ifCfg := c.Interfaces["lo"]
+				switch igp {
+				case "OSPF":
+					ifCfg.IGPConfig =
+						append(ifCfg.IGPConfig, OSPFIfConfig{
+							V6:        !is4,
+							ProcessID: 0,
+							Area:      0,
+						})
+				case "ISIS", "IS-IS":
+					ifCfg.IGPConfig =
+						append(ifCfg.IGPConfig, ISISIfConfig{
+							V6:          !is4,
+							ProcessName: isisDefaultProcess,
+							Passive:     true,
+						})
+					break
+				}
+				c.Interfaces["lo"] = ifCfg
 			}
 
 			configs[idx][j] = c
@@ -203,7 +227,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					}
 					c.IGP = append(c.IGP,
 						getISISConfig(r.Router.Loopback[0].IP, 1, 2, RouteRedistribution{
-							Connected: true,
+							// Connected: true,
 						}))
 					parentIGP := getISISConfig(parentCfg.Interfaces["lo"].IPs[0].IP, 1, 2,
 						RouteRedistribution{Connected: true, BGP: true})
@@ -270,6 +294,62 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 		}
 		idx++
 	}
+	configs[idx] = generateIXPConfigs(p)
+	return configs
+}
+
+func generateIXPConfigs(p *project.Project) []*FRRConfig {
+	configs := make([]*FRRConfig, len(p.IXPs))
+	for idx, ixp := range p.IXPs {
+		c := &FRRConfig{
+			Hostname:     ixp.RouteServer.Hostname,
+			IXP:          true,
+			Interfaces:   make(map[string]IfConfig, 2), // to IXP brige + lo
+			StaticRoutes: make(staticRoutes, len(ixp.RouteServer.Links)),
+		}
+
+		// Loopback interface
+		nbLo := len(ixp.RouteServer.Loopback)
+		if nbLo > 0 {
+			ips := make([]net.IPNet, nbLo)
+			for idx, ip := range ixp.RouteServer.Loopback {
+				ips[idx] = ip
+			}
+			c.Interfaces["lo"] = IfConfig{
+				IPs: ips,
+			}
+		}
+
+		// BGP
+		c.BGP = BGPConfig{
+			ASN:       ixp.ASN,
+			Neighbors: make(map[string]BGPNbr),
+		}
+
+		if nbLo > 0 {
+			c.BGP.RouterID = ixp.RouteServer.Loopback[0].IP.String()
+		}
+
+		for ip, nbr := range ixp.RouteServer.Neighbors {
+			c.BGP.Neighbors[ip] = BGPNbr(*nbr)
+			if nbr.RemoteAS != ixp.ASN {
+				c.StaticRoutes[nbr.IfName] =
+					append(c.StaticRoutes[nbr.IfName], ip+"/32")
+			}
+		}
+
+		// Interfaces
+		for _, iface := range ixp.RouteServer.Links {
+			ifCfg := IfConfig{
+				IPs:         []net.IPNet{iface.IP},
+				Description: iface.Description,
+				Speed:       iface.Speed,
+				External:    iface.External,
+			}
+			c.Interfaces[iface.IfName] = ifCfg
+			configs[idx] = c
+		}
+	}
 	return configs
 }
 
@@ -301,7 +381,9 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 	}
 	for ip, v := range c.Neighbors {
 		fmt.Fprintln(dst, " neighbor", ip, "remote-as", v.RemoteAS)
-		fmt.Fprintln(dst, " neighbor", ip, "update-source", v.UpdateSource)
+		if v.UpdateSource != "" {
+			fmt.Fprintln(dst, " neighbor", ip, "update-source", v.UpdateSource)
+		}
 		if !v.ConnCheck {
 			fmt.Fprintln(dst, " neighbor", ip, "disable-connected-check")
 		}
@@ -324,6 +406,9 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 			}
 			if v.RRClient {
 				fmt.Fprintln(&af4, "  neighbor", ip, "route-reflector-client")
+			}
+			if v.RSClient {
+				fmt.Fprintln(&af4, "  neighbor", ip, "route-server-client")
 			}
 		}
 
@@ -563,7 +648,9 @@ password topomate
 
 	if c.BGP.ASN > 0 {
 		writeBGP(dst, c.BGP)
-		writeRelationsMaps(dst, c.BGP.ASN)
+		if !c.IXP { // no need for default route-maps in IXP
+			writeRelationsMaps(dst, c.BGP.ASN)
+		}
 	}
 
 	for _, igp := range c.IGP {

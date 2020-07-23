@@ -31,6 +31,7 @@ func (p *Project) parseIXPConfig(cfg config.IXPConfig) IXP {
 			Hostname:      name,
 			ContainerName: name,
 			NextInterface: 0,
+			CustomImage:   config.DockerRSImage,
 			Neighbors:     make(map[string]*BGPNbr, len(cfg.Peers)),
 		},
 	}
@@ -71,8 +72,13 @@ func (p *Project) parseIXPConfig(cfg config.IXPConfig) IXP {
 		if err != nil {
 			utils.Fatalln(err)
 		}
+		if len(_p) < 2 {
+			utils.Fatalf("IXP link error: peer entry %s malformed (must be <ASN>.<Router_ID>)\n", fields[0])
+		}
 		peerRouter := _p[1]
-
+		if _, ok := p.AS[peerASN]; !ok {
+			utils.Fatalf("IXP link error: ASN%d does not exist\n", peerASN)
+		}
 		l := NewExtLinkItem(peerASN, p.AS[peerASN].getRouter(peerRouter))
 
 		if len(fields) >= 2 {
@@ -93,33 +99,37 @@ func (p *Project) parseIXPConfig(cfg config.IXPConfig) IXP {
 
 func (ixp *IXP) linkIXP() {
 
-	rsID := ixp.RouteServer.LoID()
+	// rsID := ixp.RouteServer.LoID()
 	ixp.Links[0].Router.Links =
 		append(ixp.RouteServer.Links, ixp.Links[0].Interface)
-
+	rmIn, rmOut := getRouteMaps(Peer, nil, nil) // PEER route-maps
 	// For each peer, we create an iBGP session between it and the route-server
 	for i, lnk := range ixp.Links {
 		// Skip first link (RouteServer)
 		if i == 0 {
 			continue
 		}
-		routerID := lnk.Router.LoID()
+		// routerID := lnk.Router.LoID()
 
 		// Peer
 		lnk.Router.Links = append(lnk.Router.Links, lnk.Interface)
-		lnk.Router.Neighbors[rsID] = &BGPNbr{
-			RemoteAS:     ixp.ASN,
-			UpdateSource: "lo",
+		lnk.Router.Neighbors[ixp.RouteServer.Links[0].IP.IP.String()] = &BGPNbr{
+			RemoteAS: ixp.ASN,
+			// UpdateSource: "lo",
 			NextHopSelf:  true,
 			AF:           AddressFamily{IPv4: true},
+			IfName:       lnk.Interface.IfName,
+			RouteMapsIn:  rmIn,
+			RouteMapsOut: rmOut,
 		}
 
 		// RS
-		lnk.Router.Neighbors[routerID] = &BGPNbr{
-			RemoteAS:     lnk.ASN,
-			UpdateSource: "lo",
-			AF:           AddressFamily{IPv4: true},
-			RSClient:     true,
+		ixp.RouteServer.Neighbors[lnk.Interface.IP.IP.String()] = &BGPNbr{
+			RemoteAS: lnk.ASN,
+			// UpdateSource: "lo",
+			IfName:   ixp.Links[0].Interface.IfName,
+			AF:       AddressFamily{IPv4: true},
+			RSClient: true,
 		}
 	}
 }

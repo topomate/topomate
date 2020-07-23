@@ -100,6 +100,17 @@ func PullImages() {
 		fmt.Println("Done.")
 	}
 
+	if config.VFlag {
+		fmt.Print("Pulling latest route-server image... ")
+	}
+	out, err = cli.ImagePull(ctx, config.DockerRSImage, types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}
+	if config.VFlag {
+		fmt.Println("Done.")
+	}
+
 	defer out.Close()
 	if _, err := ioutil.ReadAll(out); err != nil {
 		panic(err)

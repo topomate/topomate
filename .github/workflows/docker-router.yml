@@ -18,7 +18,7 @@ jobs:
           tags: latest
           path: images/router
 
-  build-router:
+  build-route-server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

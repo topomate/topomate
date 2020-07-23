@@ -24,6 +24,7 @@ type FRRConfig struct {
 	MPLS         bool
 	StaticRoutes map[string][]string
 	nextOSPF     int
+	IXP          bool
 }
 
 type IfConfig struct {
@@ -95,6 +96,7 @@ type ISISIfConfig struct {
 	ProcessName string
 	CircuitType int
 	Cost        int
+	Passive     bool
 }
 
 type OSPFIfConfig struct {
