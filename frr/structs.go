@@ -12,6 +12,7 @@ const (
 	fromProvider       = 20
 	fromPeer           = 30
 	isisDefaultProcess = "1"
+	frrVersion         = "7.4.0"
 )
 
 type staticRoutes map[string][]string

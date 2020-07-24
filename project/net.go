@@ -73,3 +73,15 @@ func (n *Net) NextIP() net.IPNet {
 	n.NextAvailable.IP = cidr.Inc(n.NextAvailable.IP)
 	return res
 }
+
+// Is4 returns true if Net is an IPV4 network
+func (n Net) Is4() bool {
+	return n.IPNet.IP.To4() != nil
+}
+
+// CheckPrefix returns the subnet length of the network. The second value
+// return is true if the prefixLen provided is valable.
+func (n Net) CheckPrefix(prefixLen int) (int, bool) {
+	m, max := n.IPNet.Mask.Size()
+	return m, !(prefixLen < m || prefixLen > max)
+}

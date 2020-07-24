@@ -35,6 +35,7 @@ type ASConfig struct {
 	NumRouters      int           `yaml:"routers,omitempty"`
 	IGP             string        `yaml:"igp,omitempty"`
 	RedistributeIGP bool          `yaml:"redistribute_igp"`
+	ISIS            ISISConfig    `yaml:"isis"`
 	Prefix          string        `yaml:"prefix,omitempty"`
 	LoRange         string        `yaml:"loopback_start,omitempty"`
 	BGP             BGPConfig     `yaml:"bgp"`
@@ -94,4 +95,11 @@ type IXPConfig struct {
 	Peers    []string `yaml:"peers,flow"`
 	Prefix   string   `yaml:"prefix"`
 	Loopback string   `yaml:"loopback"`
+}
+
+type ISISConfig struct {
+	L1    []int         `yaml:"level-1,flow"`
+	L2    []int         `yaml:"level-2,flow"`
+	L12   []int         `yaml:"level-1-2,flow"`
+	Areas map[int][]int `yaml:"areas,flow"`
 }

@@ -110,9 +110,10 @@ func ReadConfig(path string) *Project {
 
 		// Generate router elements
 		for i := 0; i < k.NumRouters; i++ {
+			id := i + 1
 			host := "R" + strconv.Itoa(i+1)
 			a.Routers[i] = &Router{
-				ID:            i + 1,
+				ID:            id,
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
 				NextInterface: 0,
@@ -125,6 +126,12 @@ func ReadConfig(path string) *Project {
 					append(a.Routers[i].Loopback, *loNet)
 				loNet.IP = cidr.Inc(loNet.IP)
 			}
+
+			// Check if it uses ISIS
+			if lvl := k.ISIS.CheckLevel(id); lvl != 0 {
+				a.Routers[i].IGP.ISIS.Level = lvl
+			}
+			a.Routers[i].IGP.ISIS.Area = k.ISIS.CheckArea(id)
 		}
 
 		// Setup links

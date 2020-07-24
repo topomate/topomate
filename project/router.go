@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -48,6 +49,15 @@ type Router struct {
 	Links         []*NetInterface
 	Neighbors     map[string]*BGPNbr
 	NextInterface int
+	IGP           struct {
+		ISIS struct {
+			Level int
+			Area  int
+		}
+		OSPF struct {
+			Area int
+		}
+	}
 }
 
 func (r *Router) LoID() string {
@@ -177,6 +187,6 @@ func (r *Router) ReloadConfig() {
 		"-b",
 	).CombinedOutput()
 	if err != nil {
-		utils.Fatalln(string(out), err)
+		fmt.Fprintf(os.Stderr, "%s: %s %v\n", r.ContainerName, string(out), err)
 	}
 }

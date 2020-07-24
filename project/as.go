@@ -12,6 +12,12 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+const (
+	IGPUndef = iota
+	IGPOSPF  = iota
+	IGPISIS  = iota
+)
+
 // type iBGPYaml struct {
 // 	RR []struct {
 // 		Router  int   `yaml:"router"`
@@ -136,9 +142,9 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 	if prefixLen == 0 { // do not set subnets
 		return
 	}
-	m, _ := a.Network.IPNet.Mask.Size()
-	if prefixLen <= m {
-		utils.Fatalf("AS%d subnets reservation error: prefixlen too large (%d)\n", a.ASN, prefixLen)
+	m, ok := a.Network.CheckPrefix(prefixLen)
+	if !ok {
+		utils.Fatalln("Prefix length invalid:", prefixLen)
 	}
 
 	n, _ := cidr.Subnet(a.Network.IPNet, prefixLen-m, 0)
@@ -183,6 +189,41 @@ func (a *AutonomousSystem) linkRouters(ibgp bool) {
 		}
 		if len(second.Router.Loopback) > 0 {
 			secondID = second.Router.Loopback[0].IP.String()
+		}
+
+		// Add IGP configuration elements
+
+		// switch strings.ToUpper(a.IGP) {
+		// case "ISIS", "IS-IS":
+		// 	first.Interface.IGP.ISIS.Circuit = second.Router.IGP.ISIS.Level
+		// 	second.Interface.IGP.ISIS.Circuit = first.Router.IGP.ISIS.Level
+		// 	break
+		// default:
+		// 	break
+		// }
+
+		if a.IGPType() == IGPISIS {
+			sameArea := second.Router.IGP.ISIS.Area == first.Router.IGP.ISIS.Area
+			// If the router is only L1 or L2, circuit is the same
+			if first.Router.IGP.ISIS.Level != 3 {
+				first.Interface.IGP.ISIS.Circuit = first.Router.IGP.ISIS.Level
+			} else { // If the router is L1-L2, we decide based on the opposite router
+				// Same area: L1-L2
+				if sameArea {
+					first.Interface.IGP.ISIS.Circuit = second.Interface.IGP.ISIS.Circuit
+				} else { // Different areas: L2
+					first.Interface.IGP.ISIS.Circuit = 2
+				}
+			}
+			if second.Router.IGP.ISIS.Level != 3 {
+				second.Interface.IGP.ISIS.Circuit = second.Router.IGP.ISIS.Level
+			} else {
+				if sameArea {
+					second.Interface.IGP.ISIS.Circuit = first.Interface.IGP.ISIS.Circuit
+				} else {
+					second.Interface.IGP.ISIS.Circuit = 2
+				}
+			}
 		}
 
 		// Add a reference to the interface to the router so it can access its properties
@@ -332,4 +373,16 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 	// 	AF:           AddressFamily{IPv4: true},
 	// }
 
+}
+
+func (a *AutonomousSystem) IGPType() int {
+	switch strings.ToUpper(a.IGP) {
+	case "OSPF":
+		return IGPOSPF
+	case "ISIS", "IS-IS":
+		return IGPISIS
+	default:
+		break
+	}
+	return IGPUndef
 }

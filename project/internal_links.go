@@ -14,6 +14,14 @@ const (
 	defaultSubnetLength4 = 30
 )
 
+type IGPSettings struct {
+	ISIS struct {
+		Circuit int
+		Passive bool
+	}
+	OSPFArea int
+}
+
 type NetInterface struct {
 	IfName      string
 	Description string
@@ -22,6 +30,7 @@ type NetInterface struct {
 	External    bool
 	Cost        int
 	VRF         string
+	IGP         IGPSettings
 }
 
 type LinkItem struct {

@@ -82,6 +82,9 @@ func (c ISISIfConfig) Write(dst io.Writer) {
 	} else {
 		fmt.Fprintln(dst, " isis passive")
 	}
+	if c.Cost > 0 {
+		fmt.Fprintln(dst, " isis metric", c.Cost)
+	}
 }
 
 func (c OSPFIfConfig) Write(dst io.Writer) {
@@ -90,9 +93,9 @@ func (c OSPFIfConfig) Write(dst io.Writer) {
 	} else {
 		fmt.Fprintln(dst, " ip ospf area", c.Area)
 	}
-    if c.Cost > 0 {
-	    fmt.Fprintln(dst, " bandwidth", c.Cost)
-    }
+	if c.Cost > 0 {
+		fmt.Fprintln(dst, " bandwidth", c.Cost)
+	}
 }
 
 func (c ISISConfig) writeRedistribution(w io.Writer, af string, level string) {

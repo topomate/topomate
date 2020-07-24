@@ -88,9 +88,13 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				if as.RedistributeIGP {
 					c.BGP.Redistribute.ISIS = true
 				}
-				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP, 1, 2, RouteRedistribution{
-					// Connected: true,
-				}))
+				// Default level is 2
+				lvl := 2
+				if r.IGP.ISIS.Level != 0 {
+					lvl = r.IGP.ISIS.Level
+				}
+				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP,
+					r.IGP.ISIS.Area, lvl, RouteRedistribution{}))
 				break
 			default:
 				break
@@ -116,13 +120,20 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 								Area:      0,
 							})
 					case "ISIS", "IS-IS":
+						// Default circuit-type is 2
+						circuit := iface.IGP.ISIS.Circuit
+						if circuit == 0 {
+							circuit = 2
+						}
 						ifCfg.IGPConfig =
 							append(ifCfg.IGPConfig, ISISIfConfig{
 								V6:          !is4,
 								ProcessName: isisDefaultProcess,
 								Cost:        iface.Cost,
-								CircuitType: 2,
+								Passive:     iface.IGP.ISIS.Passive,
+								CircuitType: circuit,
 							})
+
 						break
 					}
 				}
@@ -660,13 +671,13 @@ func WriteConfig(c FRRConfig) {
 	dst := &strings.Builder{}
 
 	fmt.Fprintf(dst,
-		`frr version 7.3
+		`frr version %s
 frr defaults traditional
+log file /var/log/frr.log errors
 hostname %s
-log syslog informational
 service integrated-vtysh-config
 password topomate
-`, c.Hostname)
+`, frrVersion, c.Hostname)
 	sep(dst)
 
 	for name, cfg := range c.Interfaces {

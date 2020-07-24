@@ -33,23 +33,33 @@ func (a *AutonomousSystem) internalFromFile(path string) []Link {
 		if err != nil {
 			utils.Fatalf("internalFromFile: error parsing speed at line %d, %v\n", current, err)
 		}
+
 		l.First.Interface.SetSpeedAndCost(speed)
 		l.Second.Interface.SetSpeedAndCost(speed)
 
-		if len(fields) > 3 {
+		// If ISIS is used, we don't set a default cost
+		if a.IGPType() == IGPISIS {
+			l.First.Interface.Cost = 0
+			l.Second.Interface.Cost = 0
+		}
+
+		if len(fields) > 3 && fields[3][:1] != "*" {
 			cost, err := strconv.Atoi(fields[3])
 			if err != nil {
 				utils.Fatalf("internalFromFile: error parsing IGP cost at line %d, %v\n", current, err)
 			}
 			l.First.Interface.Cost = cost
-			l.Second.Interface.Cost = cost
 		}
 		if len(fields) > 4 {
-			cost, err := strconv.Atoi(fields[4])
-			if err != nil {
-				utils.Fatalf("internalFromFile: error parsing IGP cost at line %d, %v\n", current, err)
+			if fields[4][:1] != "*" {
+				cost, err := strconv.Atoi(fields[4])
+				if err != nil {
+					utils.Fatalf("internalFromFile: error parsing IGP cost at line %d, %v\n", current, err)
+				}
+				l.Second.Interface.Cost = cost
 			}
-			l.Second.Interface.Cost = cost
+		} else {
+			l.Second.Interface.Cost = l.First.Interface.Cost
 		}
 
 		l.First.Interface.Description = fmt.Sprintf("linked to %s", l.Second.Router.Hostname)
