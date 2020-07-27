@@ -21,7 +21,8 @@ autonomous_systems:
     routers: 2
     loopback_start: '172.16.10.1/32'
     igp: OSPF
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '10.1.1.0/24'
     mpls: true
     links:
@@ -31,7 +32,8 @@ autonomous_systems:
     routers: 2
     loopback_start: '172.16.20.1/32'
     igp: OSPF
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '10.1.2.0/24'
     links:
       kind: 'full-mesh'
@@ -40,7 +42,8 @@ autonomous_systems:
     routers: 2
     loopback_start: '172.16.30.1/32'
     igp: OSPF
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '10.1.3.0/24'
     links:
       kind: 'full-mesh'
@@ -49,7 +52,8 @@ autonomous_systems:
     routers: 2
     loopback_start: '172.16.40.1/32'
     igp: OSPF
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '10.1.4.0/24'
     links:
       kind: 'full-mesh'

@@ -7,7 +7,8 @@ autonomous_systems:
     routers: 6
     loopback_start: '192.168.1.1/32'
     igp: OSPF
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '10.1.1.0/24'
     bgp:
       ibgp:
@@ -25,7 +26,8 @@ autonomous_systems:
     routers: 3
     loopback_start: '172.16.1.1/32'
     igp: 'IS-IS'
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '192.168.100.0/24'
     links:
       kind: 'full-mesh'

@@ -31,17 +31,16 @@ type BGPRelationConfig struct {
 }
 
 type ASConfig struct {
-	ASN             int           `yaml:"asn,omitempty"`
-	NumRouters      int           `yaml:"routers,omitempty"`
-	IGP             string        `yaml:"igp,omitempty"`
-	RedistributeIGP bool          `yaml:"redistribute_igp"`
-	ISIS            ISISConfig    `yaml:"isis"`
-	Prefix          string        `yaml:"prefix,omitempty"`
-	LoRange         string        `yaml:"loopback_start,omitempty"`
-	BGP             BGPConfig     `yaml:"bgp"`
-	Links           InternalLinks `yaml:"links,omitempty"`
-	MPLS            bool          `yaml:"mpls,omitempty"`
-	VPN             []VPNConfig
+	ASN        int           `yaml:"asn,omitempty"`
+	NumRouters int           `yaml:"routers,omitempty"`
+	IGP        string        `yaml:"igp,omitempty"`
+	ISIS       ISISConfig    `yaml:"isis"`
+	Prefix     string        `yaml:"prefix,omitempty"`
+	LoRange    string        `yaml:"loopback_start,omitempty"`
+	BGP        BGPConfig     `yaml:"bgp"`
+	Links      InternalLinks `yaml:"links,omitempty"`
+	MPLS       bool          `yaml:"mpls,omitempty"`
+	VPN        []VPNConfig
 }
 
 // type IBGPConfig struct {
@@ -58,7 +57,9 @@ type IBGPConfig struct {
 }
 
 type BGPConfig struct {
-	IBGP IBGPConfig `yaml:"ibgp"`
+	IBGP            IBGPConfig `yaml:"ibgp"`
+	Disabled        bool       `yaml:"disabled"`
+	RedistributeIGP bool       `yaml:"redistribute_igp"`
 }
 
 type VPNConfig struct {

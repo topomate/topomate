@@ -68,11 +68,10 @@ func ReadConfig(path string) *Project {
 
 		// Copy informations from the config
 		proj.AS[k.ASN] = &AutonomousSystem{
-			ASN:             k.ASN,
-			IGP:             k.IGP,
-			RedistributeIGP: k.RedistributeIGP,
-			MPLS:            k.MPLS,
-			Routers:         make([]*Router, k.NumRouters),
+			ASN:     k.ASN,
+			IGP:     k.IGP,
+			MPLS:    k.MPLS,
+			Routers: make([]*Router, k.NumRouters),
 		}
 
 		if config.VFlag {
@@ -81,6 +80,9 @@ func ReadConfig(path string) *Project {
 
 		// Get current AS
 		a := proj.AS[k.ASN]
+
+		a.BGP.RedistributeIGP = k.BGP.RedistributeIGP
+		a.BGP.Disabled = k.BGP.Disabled
 
 		// Parse network prefix
 		if k.Prefix != "" {

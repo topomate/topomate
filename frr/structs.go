@@ -47,6 +47,7 @@ type BGPConfig struct {
 	Networks6    []string
 	Redistribute RouteRedistribution
 	VRF          map[string]VRFConfig
+	Disabled     bool
 }
 
 type VRFConfig struct {

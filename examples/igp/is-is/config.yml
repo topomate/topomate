@@ -7,6 +7,8 @@ autonomous_systems:
     # prefix: "2001:abcd::1/64"
     prefix: "192.168.1.1/24"
     igp: "isis"
+    bgp:
+      disabled: false
     isis:
       level-1: [1, 4]
       level-2: [5]

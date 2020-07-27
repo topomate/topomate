@@ -39,15 +39,18 @@ type VPN struct {
 
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
-	ASN             int
-	IGP             string
-	RedistributeIGP bool
-	MPLS            bool
-	Network         Net
-	LoStart         net.IPNet
-	Routers         []*Router
-	Links           []Link
-	VPN             []VPN
+	ASN     int
+	IGP     string
+	MPLS    bool
+	Network Net
+	LoStart net.IPNet
+	Routers []*Router
+	Links   []Link
+	VPN     []VPN
+	BGP     struct {
+		Disabled        bool
+		RedistributeIGP bool
+	}
 }
 
 func (a *AutonomousSystem) getContainerName(n interface{}) string {

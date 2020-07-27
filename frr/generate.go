@@ -47,6 +47,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 			c.BGP = BGPConfig{
 				ASN:       i,
 				Neighbors: make(map[string]BGPNbr, n),
+				Disabled:  as.BGP.Disabled,
 			}
 
 			if is4 {
@@ -80,12 +81,12 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				} else {
 					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 				}
-				if as.RedistributeIGP {
+				if as.BGP.RedistributeIGP {
 					c.BGP.Redistribute.OSPF = true
 				}
 				break
 			case "IS-IS", "ISIS":
-				if as.RedistributeIGP {
+				if as.BGP.RedistributeIGP {
 					c.BGP.Redistribute.ISIS = true
 				}
 				// Default level is 2
@@ -231,12 +232,12 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					} else {
 						c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 					}
-					if as.RedistributeIGP {
+					if as.BGP.RedistributeIGP {
 						c.BGP.Redistribute.OSPF = true
 					}
 					break
 				case "IS-IS", "ISIS":
-					if as.RedistributeIGP {
+					if as.BGP.RedistributeIGP {
 						c.BGP.Redistribute.ISIS = true
 					}
 					c.IGP = append(c.IGP,
@@ -692,7 +693,7 @@ password topomate
 
 	writeStatic(dst, c.StaticRoutes)
 
-	if c.BGP.ASN > 0 {
+	if c.BGP.ASN > 0 && !c.BGP.Disabled {
 		writeBGP(dst, c.BGP)
 		if !c.IXP { // no need for default route-maps in IXP
 			writeRelationsMaps(dst, c.BGP.ASN)

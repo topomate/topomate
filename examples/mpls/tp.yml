@@ -5,7 +5,8 @@ autonomous_systems:
     routers: 4
     loopback_start: '10.1.1.1/32'
     igp: ISIS
-    redistribute_igp: true
+    bgp:
+      redistribute_igp: true
     prefix: '172.18.10.0/24'
     links:
       kind: 'manual'
