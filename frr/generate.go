@@ -507,6 +507,12 @@ func writeISIS(dst io.Writer, c ISISConfig) {
 	fmt.Fprintln(dst, " metric-style wide")
 	fmt.Fprintln(dst, " is-type", isisTypeString(c.Type))
 
+	// If L1L2, we distribute a default route to the L1 neighbors
+	if c.Type == 3 {
+		fmt.Fprintln(dst, " set-attached-bit")
+		fmt.Fprintln(dst, " default-information originate ipv4 level-1 always")
+	}
+
 	// Here we write the redistribution manually as ISIS syntax is not standard
 	c.writeRedistribute(dst, true, false)
 
