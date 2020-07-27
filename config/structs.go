@@ -104,3 +104,8 @@ type ISISConfig struct {
 	L12   []int         `yaml:"level-1-2,flow"`
 	Areas map[int][]int `yaml:"areas,flow"`
 }
+
+type OSPFConfig struct {
+	Areas map[int][]int `yaml:"areas,flow"`
+	Stubs []int         `yaml:"stubs"`
+}
