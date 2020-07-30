@@ -129,11 +129,41 @@ func ReadConfig(path string) *Project {
 				loNet.IP = cidr.Inc(loNet.IP)
 			}
 
-			// Check if it uses ISIS
-			if lvl := k.ISIS.CheckLevel(id); lvl != 0 {
-				a.Routers[i].IGP.ISIS.Level = lvl
+			/***************************** IS-IS  *****************************/
+			if a.IGPType() == IGPISIS && k.ISIS.Areas != nil {
+				if lvl := k.ISIS.CheckLevel(id); lvl != 0 {
+					a.Routers[i].IGP.ISIS.Level = lvl
+				}
+				a.Routers[i].IGP.ISIS.Area = k.ISIS.CheckArea(id)
 			}
-			a.Routers[i].IGP.ISIS.Area = k.ISIS.CheckArea(id)
+
+		}
+		/****************************** OSPF ******************************/
+		if a.IGPType() == IGPOSPF && k.OSPF.Networks != nil {
+			for _, n := range k.OSPF.Networks {
+				// check if network is valid
+				if _, _, err := net.ParseCIDR(n.Prefix); err != nil {
+					utils.Fatalln(err)
+				}
+
+				for _, rID := range n.Routers {
+					r := a.getRouter(rID)
+					if r.IGP.OSPF == nil {
+						r.IGP.OSPF = []OSPFNet{{
+							Prefix: n.Prefix,
+							Area:   n.Area,
+						}}
+					} else {
+						r.IGP.OSPF =
+							append(r.IGP.OSPF, OSPFNet{
+								Prefix: n.Prefix,
+								Area:   n.Area,
+							})
+					}
+				}
+				// a.Routers[i].IGP.OSPF.Networks[n.Prefix] = n.Area
+			}
+			a.OSPF.Stubs = k.OSPF.Stubs
 		}
 
 		// Setup links

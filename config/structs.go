@@ -35,6 +35,7 @@ type ASConfig struct {
 	NumRouters int           `yaml:"routers,omitempty"`
 	IGP        string        `yaml:"igp,omitempty"`
 	ISIS       ISISConfig    `yaml:"isis"`
+	OSPF       OSPFConfig    `yaml:"ospf"`
 	Prefix     string        `yaml:"prefix,omitempty"`
 	LoRange    string        `yaml:"loopback_start,omitempty"`
 	BGP        BGPConfig     `yaml:"bgp"`
@@ -105,7 +106,18 @@ type ISISConfig struct {
 	Areas map[int][]int `yaml:"areas,flow"`
 }
 
+type networkOSPF struct {
+	Prefix  string `yaml:"prefix"`
+	Area    int    `yaml:"area"`
+	Routers []int  `yaml:"routers,flow"`
+}
+
 type OSPFConfig struct {
-	Areas map[int][]int `yaml:"areas,flow"`
-	Stubs []int         `yaml:"stubs"`
+	Networks []networkOSPF `yaml:"networks"`
+	Stubs    []int         `yaml:"stubs"`
+	// Areas map[int]struct {
+	// 	Networks []string `yaml:"networks,flow"`
+	// 	Routers  []int    `yaml:"routers,flow"`
+	// 	Stub     bool     `yaml:"stub"`
+	// } `yaml:"areas"`
 }

@@ -38,6 +38,11 @@ type BGPNbr struct {
 	RSClient     bool
 }
 
+type OSPFNet struct {
+	Prefix string
+	Area   int
+}
+
 // Router contains informations needed to configure a router.
 // It contains elements relative to the container and to the FRR configuration.
 type Router struct {
@@ -54,9 +59,8 @@ type Router struct {
 			Level int
 			Area  int
 		}
-		OSPF struct {
-			Area int
-		}
+		// OSPF []string
+		OSPF []OSPFNet
 	}
 }
 

@@ -73,14 +73,29 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 			switch igp {
 			case "OSPF":
 				// Check if we need to setup OSPFv2 or OSPFv3
-				if is4 {
-					c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
-						// Connected: true,
-					}))
-					c.nextOSPF = 2
-				} else {
+				if !is4 {
 					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 				}
+
+				// No custom config or OSPFv3 (areas not supported)
+				if r.IGP.OSPF == nil || !is4 {
+					break
+				}
+
+				oCfg := getOSPFConfig(c.BGP.RouterID, 0)
+				for _, oNet := range r.IGP.OSPF {
+					oCfg.Networks = append(oCfg.Networks, oNet)
+					if as.IsOSPFStub(oNet.Area) {
+						oCfg.Stubs[oNet.Area] = true
+					}
+				}
+				// add loopback in the first area specified
+				oCfg.Networks = append(oCfg.Networks, project.OSPFNet{
+					Area:   oCfg.Networks[0].Area,
+					Prefix: r.Loopback[0].String(),
+				})
+				c.IGP = append(c.IGP, oCfg)
+
 				if as.BGP.RedistributeIGP {
 					c.BGP.Redistribute.OSPF = true
 				}
@@ -113,13 +128,15 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				if !iface.External {
 					switch igp {
 					case "OSPF":
-						ifCfg.IGPConfig =
-							append(ifCfg.IGPConfig, OSPFIfConfig{
-								V6:        !is4,
-								Cost:      iface.Cost,
-								ProcessID: 0,
-								Area:      0,
-							})
+						if r.IGP.OSPF == nil {
+							ifCfg.IGPConfig =
+								append(ifCfg.IGPConfig, OSPFIfConfig{
+									V6:        !is4,
+									Cost:      iface.Cost,
+									ProcessID: 0,
+									Area:      0,
+								})
+						}
 					case "ISIS", "IS-IS":
 						// Default circuit-type is 2
 						circuit := iface.IGP.ISIS.Circuit
@@ -146,12 +163,14 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				ifCfg := c.Interfaces["lo"]
 				switch igp {
 				case "OSPF":
-					ifCfg.IGPConfig =
-						append(ifCfg.IGPConfig, OSPFIfConfig{
-							V6:        !is4,
-							ProcessID: 0,
-							Area:      0,
-						})
+					if r.IGP.OSPF == nil {
+						ifCfg.IGPConfig =
+							append(ifCfg.IGPConfig, OSPFIfConfig{
+								V6:        !is4,
+								ProcessID: 0,
+								Area:      0,
+							})
+					}
 				case "ISIS", "IS-IS":
 					ifCfg.IGPConfig =
 						append(ifCfg.IGPConfig, ISISIfConfig{
@@ -212,17 +231,12 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				case "OSPF":
 					// Check if we need to setup OSPFv2 or OSPFv3
 					if is4 {
-						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0, RouteRedistribution{
-							// Connected: true,
-						}))
+						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0))
 
 						// Add IGP on the parent side (parent index in array is
 						// its ID - 1, as usual)
-						parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0,
-							RouteRedistribution{
-								//Connected: true,
-								BGP: true,
-							})
+						parentIGP := getOSPFConfig(parentCfg.BGP.RouterID, 0)
+						parentIGP.Redistribute.BGP = true
 						parentIGP.VRF = vpn.VRF
 						parentCfg.IGP = append(
 							parentCfg.IGP,
@@ -538,6 +552,12 @@ func writeOSPF(dst io.Writer, c OSPFConfig) {
 	// }
 
 	c.Redistribute.Write(dst, 1)
+	for _, n := range c.Networks {
+		fmt.Fprintf(dst, " network %s area %d\n", n.Prefix, n.Area)
+	}
+	for stub := range c.Stubs {
+		fmt.Fprintln(dst, " area", stub, "stub")
+	}
 
 	sep(dst)
 }
@@ -735,11 +755,12 @@ func WriteAll(configs [][]*FRRConfig) {
 
 /* OSPF CONFIGURATION */
 
-func getOSPFConfig(routerID string, process int, distrib RouteRedistribution) OSPFConfig {
+func getOSPFConfig(routerID string, process int) OSPFConfig {
 	cfg := OSPFConfig{
-		ProcessID:    process,
-		Redistribute: distrib,
-		RouterID:     routerID,
+		ProcessID: process,
+		RouterID:  routerID,
+		Networks:  make([]project.OSPFNet, 0, 2),
+		Stubs:     make(map[int]bool, 2),
 	}
 	return cfg
 }

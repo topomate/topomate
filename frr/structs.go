@@ -74,6 +74,8 @@ type OSPFConfig struct {
 	VRF          string
 	Redistribute RouteRedistribution
 	RouterID     string
+	Networks     []project.OSPFNet
+	Stubs        map[int]bool
 }
 
 type OSPF6Config struct {

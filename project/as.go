@@ -36,6 +36,10 @@ type VPN struct {
 	Customers []VPNCustomer
 	Neighbors map[string]bool
 }
+type ospfAttributes struct {
+	Area int
+	Stub bool
+}
 
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
@@ -51,6 +55,18 @@ type AutonomousSystem struct {
 		Disabled        bool
 		RedistributeIGP bool
 	}
+	OSPF struct {
+		Stubs []int
+	}
+}
+
+func (a *AutonomousSystem) IsOSPFStub(area int) bool {
+	for _, e := range a.OSPF.Stubs {
+		if e == area {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *AutonomousSystem) getContainerName(n interface{}) string {
