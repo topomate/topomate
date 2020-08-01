@@ -679,7 +679,7 @@ route-map PROVIDER_IN permit 10
 }
 
 func WriteConfig(c FRRConfig) {
-	genDir := utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir)
+	genDir := utils.GetDirectoryFromKey("ConfigDir", "")
 	var filename string
 	if c.BGP.ASN == 0 {
 		filename = fmt.Sprintf("%s/conf_cust_%s", genDir, c.Hostname)

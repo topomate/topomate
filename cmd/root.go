@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/project"
 	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -58,18 +58,21 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.SetDefault("MainDir", config.DefaultDir)
-	viper.SetDefault("ProjectDir", config.DefaultProjectDir)
-	viper.SetDefault("ConfigDir", config.DefaultConfigDir)
+	viper.SetDefault("MainDir", utils.GetHome()+"/topomate")
+	viper.SetDefault("ProjectDir", utils.GetHome()+"/topomate/projects")
+	viper.SetDefault("ConfigDir", utils.GetHome()+"/topomate/generated")
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
+		home := os.Getenv("HOME")
 		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		if usr, sudo := os.LookupEnv("SUDO_USER"); sudo {
+			u, err := user.Lookup(usr)
+			if err != nil {
+				utils.Fatalln("Error looking for user", u)
+			}
+			home = u.HomeDir
 		}
 
 		// Search config in home directory with name ".topomate" (without extension).

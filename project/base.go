@@ -300,7 +300,7 @@ func (p *Project) StartAll(linksFlag string) {
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
 				"%s/conf_%d_%s",
-				utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+				utils.GetDirectoryFromKey("ConfigDir", ""),
 				asn,
 				v.Routers[i].Hostname,
 			)
@@ -318,7 +318,7 @@ func (p *Project) StartAll(linksFlag string) {
 			for j := 0; j < len(v.VPN[i].Customers); j++ {
 				configPath := fmt.Sprintf(
 					"%s/conf_cust_%s",
-					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+					utils.GetDirectoryFromKey("ConfigDir", ""),
 					v.VPN[i].Customers[j].Router.Hostname,
 				)
 				go func(r Router, wg *sync.WaitGroup, path string) {
@@ -335,7 +335,7 @@ func (p *Project) StartAll(linksFlag string) {
 	for i := 0; i < len(p.IXPs); i++ {
 		configPath := fmt.Sprintf(
 			"%s/conf_%d_%s",
-			utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+			utils.GetDirectoryFromKey("ConfigDir", ""),
 			p.IXPs[i].ASN,
 			p.IXPs[i].RouteServer.Hostname,
 		)
@@ -387,7 +387,7 @@ func (p *Project) StopAll() {
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
 				"%s/conf_%d_%s",
-				utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+				utils.GetDirectoryFromKey("ConfigDir", ""),
 				asn,
 				v.Routers[i].Hostname,
 			)
@@ -402,7 +402,7 @@ func (p *Project) StopAll() {
 			for j := 0; j < len(v.VPN[i].Customers); j++ {
 				configPath := fmt.Sprintf(
 					"%s/conf_cust_%s",
-					utils.GetDirectoryFromKey("ConfigDir", config.DefaultConfigDir),
+					utils.GetDirectoryFromKey("ConfigDir", ""),
 					v.VPN[i].Customers[j].Router.Hostname,
 				)
 				go func(r Router, wg *sync.WaitGroup, path string) {

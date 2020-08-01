@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -47,6 +48,21 @@ func ExecDocker(cName string, arg ...string) {
 		fmt.Println(args)
 		Fatalln(string(out), err)
 	}
+}
+
+// GetHome returns the home directory of the user. If sudo is used, it returns
+// the original user home directory.
+func GetHome() string {
+	home := os.Getenv("HOME")
+	// Find home directory.
+	if usr, sudo := os.LookupEnv("SUDO_USER"); sudo {
+		u, err := user.Lookup(usr)
+		if err != nil {
+			Fatalln("Error looking for user", u)
+		}
+		home = u.HomeDir
+	}
+	return home
 }
 
 // GetDirectoryFromKey returns the directory name specified by the given key

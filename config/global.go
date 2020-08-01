@@ -10,9 +10,3 @@ const (
 	DockerRouterImage = "topomate/router"
 	DockerRSImage     = "topomate/route-server"
 )
-
-const (
-	DefaultDir        = "~/topomate"
-	DefaultProjectDir = DefaultDir + "/projects"
-	DefaultConfigDir  = DefaultDir + "/generated"
-)
