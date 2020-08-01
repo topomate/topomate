@@ -308,7 +308,7 @@ func (p *Project) StartAll(linksFlag string) {
 				r.StartContainer(nil, path)
 				wg.Done()
 				<-reloadReady // wait until links are applied
-				r.ReloadConfig()
+				r.StartFRR()
 				wg.Done()
 			}(*v.Routers[i], &wg, configPath)
 		}
@@ -325,7 +325,7 @@ func (p *Project) StartAll(linksFlag string) {
 					r.StartContainer(nil, path)
 					wg.Done()
 					<-reloadReady // wait until links are applied
-					r.ReloadConfig()
+					r.StartFRR()
 					wg.Done()
 				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
@@ -343,7 +343,7 @@ func (p *Project) StartAll(linksFlag string) {
 			r.StartContainer(nil, path)
 			wg.Done()
 			<-reloadReady // wait until links are applied
-			r.ReloadConfig()
+			r.StartFRR()
 			wg.Done()
 		}(*p.IXPs[i].RouteServer, &wg, configPath)
 	}

@@ -13,6 +13,9 @@ import (
 	"github.com/rahveiz/topomate/utils"
 )
 
+var nextRouteTarget = 1
+var nextRouteDescriptor = 1
+
 func GenerateConfig(p *project.Project) [][]*FRRConfig {
 	configs := make([][]*FRRConfig, len(p.AS)+1)
 	idx := 0
@@ -77,12 +80,14 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 				}
 
+				oCfg := getOSPFConfig(c.BGP.RouterID, 0)
+
 				// No custom config or OSPFv3 (areas not supported)
 				if r.IGP.OSPF == nil || !is4 {
+					c.IGP = append(c.IGP, oCfg)
 					break
 				}
 
-				oCfg := getOSPFConfig(c.BGP.RouterID, 0)
 				for _, oNet := range r.IGP.OSPF {
 					oCfg.Networks = append(oCfg.Networks, oNet)
 					if as.IsOSPFStub(oNet.Area) {
@@ -214,10 +219,10 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				// if BGPVRF config is not present in parent, add it
 				if _, ok := parentCfg.BGP.VRF[vpn.VRF]; !ok {
 					parentCfg.BGP.VRF[vpn.VRF] = VRFConfig{
-						RD: 1,
+						RD: nextRouteDescriptor,
 						RT: RouteTarget{
-							In:  1,
-							Out: 1,
+							In:  nextRouteTarget,
+							Out: nextRouteTarget,
 						},
 						Redistribute: RouteRedistribution{
 							//Connected: true,
@@ -346,8 +351,13 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				configs[idx][j] = c
 				j++
 			}
+			nextRouteDescriptor++
+			nextRouteTarget++
 		}
 		idx++
+		// Reset RD / RT values for the next AS
+		nextRouteTarget = 1
+		nextRouteDescriptor = 1
 	}
 	configs[idx] = generateIXPConfigs(p)
 	return configs
