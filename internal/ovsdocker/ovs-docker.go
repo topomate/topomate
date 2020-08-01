@@ -36,6 +36,7 @@ type OVSDockerClient struct {
 
 type OVSInterface struct {
 	HostIface      string `json:"h_if"`
+	NbrIface       string `json:"nbr_if"`
 	Bridge         string `json:"br"`
 	ContainerIface string `json:"c_if"`
 	Settings       PortSettings

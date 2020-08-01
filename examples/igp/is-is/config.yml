@@ -1,5 +1,8 @@
 name: "isis"
 
+# global_settings:
+#   net_backend: datapath
+
 autonomous_systems:
   - asn: 10
     routers: 5

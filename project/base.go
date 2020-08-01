@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rahveiz/topomate/internal/datapath"
+
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/internal/link"
@@ -48,6 +50,11 @@ func ReadConfig(path string) *Project {
 	config.ConfigDir = filepath.Dir(path)
 
 	// Init global settings
+	if conf.Global.NetBackend == "datapath" {
+		config.NetBackend = config.NetODP
+	} else {
+		config.NetBackend = config.NetOVS
+	}
 	conf.Global.BGP.ToGlobal()
 
 	nbAS := len(conf.AS)
@@ -427,8 +434,10 @@ func (p *Project) StopAll() {
 
 func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 
-	// Create an OVS bridge
-	link.CreateBridge(brName)
+	if config.NetBackend == config.NetOVS {
+		// Create an OVS bridge
+		link.CreateBridge(brName)
+	}
 
 	// Prepare a slice for bulk add to the OVS bridge (better performances)
 	// res := make([]ovsdocker.OVSInterface, 0, len(links))
@@ -451,7 +460,8 @@ func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 		if _, ok := m[idA]; !ok {
 			m[idA] = make([]ovsdocker.OVSInterface, 0, len(links))
 		}
-		m[idA] = append(m[idA], *hostIf)
+		firstHostIf := *hostIf
+		// m[idA] = append(m[idA], *hostIf)
 		settings.OFPort++
 
 		settings.Speed = v.Second.Interface.Speed
@@ -461,8 +471,14 @@ func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 		if _, ok := m[idB]; !ok {
 			m[idB] = make([]ovsdocker.OVSInterface, 0, len(links))
 		}
-		m[idB] = append(m[idB], *hostIf)
+		secHostIf := *hostIf
+		// m[idB] = append(m[idB], *hostIf)
 		settings.OFPort++
+
+		firstHostIf.NbrIface = secHostIf.HostIface
+		secHostIf.NbrIface = firstHostIf.HostIface
+		m[idA] = append(m[idA], firstHostIf)
+		m[idB] = append(m[idB], secHostIf)
 	}
 	// return res
 }
@@ -485,20 +501,28 @@ func (p *Project) ApplyInternalLinks() {
 		// Setup container links
 		setupContainerLinks(brName, as.Links, p.AllLinks)
 	}
-	// Link host interfaces to OVS bridges
-	ovsdocker.AddToBridgeBulk(p.AllLinks)
+	if config.NetBackend == config.NetODP {
+		datapath.ProcessLinks("topo-int", p.AllLinks)
+	} else {
+		// Link host interfaces to OVS bridges
+		ovsdocker.AddToBridgeBulk(p.AllLinks)
 
-	// Apply OpenFlow rules to the bridges
-	for n, as := range p.AS {
-		brName := fmt.Sprintf("int-%d", n)
-		applyFlow(brName, as.Links)
+		// Apply OpenFlow rules to the bridges
+		for n, as := range p.AS {
+			brName := fmt.Sprintf("int-%d", n)
+			applyFlow(brName, as.Links)
+		}
 	}
 }
 
 // RemoveInternalLinks removes all internal links of the project
 func (p *Project) RemoveInternalLinks() {
-	for n := range p.AS {
-		link.DeleteBridge(fmt.Sprintf("int-%d", n))
+	if config.NetBackend == config.NetODP {
+		datapath.DeleteDatapath("topo-int")
+	} else {
+		for n := range p.AS {
+			link.DeleteBridge(fmt.Sprintf("int-%d", n))
+		}
 	}
 }
 

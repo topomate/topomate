@@ -16,7 +16,8 @@ type BaseConfig struct {
 }
 
 type GlobalConfig struct {
-	BGP GlobalBGPConfig
+	NetBackend string `yaml:"net_backend"`
+	BGP        GlobalBGPConfig
 }
 
 type GlobalBGPConfig struct {

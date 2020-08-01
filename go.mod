@@ -25,6 +25,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/vishvananda/netlink v1.1.0
+	github.com/weaveworks/go-odp v0.0.0-20181017121109-6b0aa22550d9
 	golang.org/x/tools v0.0.0-20200701041122-1837592efa10 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )
