@@ -72,8 +72,8 @@ func resumeContainers(name string) {
 		for _, v := range m[name] {
 			d.Portname = strings.TrimSuffix(v.HostIface, "_l")
 			d.AddPort(v.Bridge, v.ContainerIface, v.Settings, nil, true)
-			utils.ExecDocker(d.ContainerName, "delayed-reload")
 		}
+		utils.StartFrr(name)
 	} else { // Name not specified, start all the containers
 		wg := sync.WaitGroup{}
 		for cName, lks := range m {
@@ -86,8 +86,8 @@ func resumeContainers(name string) {
 				for _, v := range links {
 					d.Portname = strings.TrimSuffix(v.HostIface, "_l")
 					d.AddPort(v.Bridge, v.ContainerIface, v.Settings, nil, true)
-					utils.ExecDocker(d.ContainerName, "delayed-reload")
 				}
+				utils.StartFrr(name)
 				w.Done()
 			}(&wg, &ctx, cName, lks)
 		}

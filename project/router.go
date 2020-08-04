@@ -195,15 +195,7 @@ func (r *Router) ReloadConfig() {
 	}
 }
 
+// StartFRR launches the init script inside the container
 func (r *Router) StartFRR() {
-	out, err := exec.Command(
-		"docker",
-		"exec",
-		r.ContainerName,
-		"/usr/lib/frr/frrinit.sh",
-		"start",
-	).CombinedOutput()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s %v\n", r.ContainerName, string(out), err)
-	}
+	utils.StartFrr(r.ContainerName)
 }

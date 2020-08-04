@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/rahveiz/topomate/config"
-	"github.com/rahveiz/topomate/frr"
 	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/cobra"
 )
@@ -15,11 +14,10 @@ var startCmd = &cobra.Command{
 Automatically creates Docker containers, network links and FRR configuration files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
-
+		setConfigDir(newConf.Name)
 		if n, err := cmd.Flags().GetBool("no-generate"); err == nil {
 			if !n {
-				foo := frr.GenerateConfig(newConf)
-				frr.WriteAll(foo)
+				generateConfigs(newConf)
 			}
 		} else {
 			utils.Fatalln(err)
@@ -46,14 +44,4 @@ func init() {
 	startCmd.Flags().String("links", "all", `Restrict which links should be applied (all, internal, external, none). Defaults to all.`)
 	startCmd.Flags().Bool("no-generate", false, "Do not generate configuration files")
 	startCmd.Flags().Bool("no-pull", false, "Do not pull docker image from DockerHub.")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// startCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

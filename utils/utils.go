@@ -142,3 +142,16 @@ func PullImages() {
 		panic(err)
 	}
 }
+
+func StartFrr(cName string) {
+	out, err := exec.Command(
+		"docker",
+		"exec",
+		cName,
+		"/usr/lib/frr/frrinit.sh",
+		"start",
+	).CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %s %v\n", cName, string(out), err)
+	}
+}

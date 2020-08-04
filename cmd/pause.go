@@ -32,16 +32,6 @@ the veth pairs. OVS bridges will be kept.`,
 
 func init() {
 	rootCmd.AddCommand(pauseCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pauseCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pauseCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func pauseContainers(name string) {
@@ -71,8 +61,6 @@ func pauseContainers(name string) {
 			if err := c.VSwitch.DeletePort(v.Bridge, v.HostIface); err != nil {
 				utils.Fatalln(err)
 			}
-			// d.Portname = strings.TrimSuffix(v.HostIface, "_l")
-			// d.AddPort(v.Bridge, v.ContainerIface, v.Settings, nil, true)
 		}
 	} else { // Name not specified, stop all the containers
 		wg := sync.WaitGroup{}

@@ -639,4 +639,10 @@ func (p *Project) saveLinks() {
 	}
 	defer f.Close()
 	f.Write(j)
+	f2, err := os.Create(utils.GetDirectoryFromKey("ConfigDir", "") + "/links.json")
+	if err != nil {
+		utils.Fatalln(err)
+	}
+	defer f2.Close()
+	f2.Write(j)
 }
