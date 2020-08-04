@@ -26,6 +26,8 @@ type FRRConfig struct {
 	StaticRoutes map[string][]string
 	nextOSPF     int
 	IXP          bool
+	PrefixLists  []PrefixList
+	RouteMaps    []RouteMap
 }
 
 type IfConfig struct {
@@ -108,4 +110,20 @@ type OSPFIfConfig struct {
 	ProcessID int
 	Area      int
 	Cost      int
+}
+
+type PrefixList struct {
+	Name   string
+	Prefix string
+	Deny   bool
+}
+
+type RouteMapMatch interface {
+	WriteMatch(dst io.Writer)
+}
+
+type RouteMap struct {
+	Name  string
+	Match RouteMapMatch
+	Deny  bool
 }

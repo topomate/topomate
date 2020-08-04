@@ -195,11 +195,21 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 
 		// VPNS
 		for _, vpn := range as.VPN {
+			rtIn, rtOut := nextRouteTarget, nextRouteTarget
+
+			// if hub is set, we need a second route-target
+			if vpn.IsHubAndSpoke() {
+				rtOut++
+				nextRouteTarget++
+			}
+
 			for _, r := range vpn.Customers {
 				c := &FRRConfig{
 					Hostname:     r.Router.Hostname,
 					Interfaces:   make(map[string]IfConfig, n),
 					StaticRoutes: make(staticRoutes, len(r.Router.Links)),
+					// PrefixLists:  make([]PrefixList, 0, 16),
+					// RouteMaps:    make([]RouteMap, 0, 16),
 				}
 				nbLo := len(r.Router.Loopback)
 				if nbLo > 0 {
@@ -216,16 +226,34 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				igp := strings.ToUpper(as.IGP)
 				parentCfg := configs[idx][r.Parent.ID-1]
 
+				parentRt := RouteTarget{
+					In:  rtIn,
+					Out: rtOut,
+				}
+
+				// if we use hub-and-spoke VPN, some modifications are made on the hub
+				if vpn.IsHubAndSpoke() && r.Hub {
+					// invert the route-targets for the hub
+					parentRt = RouteTarget{
+						In:  rtOut,
+						Out: rtIn,
+					}
+
+					// first link is the interface linked to the PE
+					iface := r.Router.Links[0]
+					// add a static route to the remote subnets to be announced
+					for _, subnet := range vpn.SpokeSubnets {
+						c.StaticRoutes[iface.IfName] =
+							append(c.StaticRoutes[iface.IfName], subnet.String())
+					}
+				}
+
 				// if BGPVRF config is not present in parent, add it
 				if _, ok := parentCfg.BGP.VRF[vpn.VRF]; !ok {
 					parentCfg.BGP.VRF[vpn.VRF] = VRFConfig{
 						RD: nextRouteDescriptor,
-						RT: RouteTarget{
-							In:  nextRouteTarget,
-							Out: nextRouteTarget,
-						},
+						RT: parentRt,
 						Redistribute: RouteRedistribution{
-							//Connected: true,
 							OSPF: true,
 						},
 					}
@@ -236,7 +264,11 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				case "OSPF":
 					// Check if we need to setup OSPFv2 or OSPFv3
 					if is4 {
-						c.IGP = append(c.IGP, getOSPFConfig(c.BGP.RouterID, 0))
+						oCfg := getOSPFConfig(c.BGP.RouterID, 0)
+						if r.Hub {
+							oCfg.Redistribute.Static = true
+						}
+						c.IGP = append(c.IGP, oCfg)
 
 						// Add IGP on the parent side (parent index in array is
 						// its ID - 1, as usual)
@@ -301,7 +333,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 								Speed:       parentIf.Speed,
 								IGPConfig:   make([]IGPIfConfig, 0, 5),
 								External:    true,
-								VRF:         vpn.VRF,
+								VRF:         parentIf.VRF,
 							}
 							pIfCfg.IGPConfig = append(pIfCfg.IGPConfig, OSPFIfConfig{
 								V6:        !is4,

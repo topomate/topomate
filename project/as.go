@@ -29,12 +29,14 @@ const (
 type VPNCustomer struct {
 	Router *Router
 	Parent *Router
+	Hub    bool
 }
 
 type VPN struct {
-	VRF       string
-	Customers []VPNCustomer
-	Neighbors map[string]bool
+	VRF          string
+	Customers    []VPNCustomer
+	Neighbors    map[string]bool
+	SpokeSubnets []net.IPNet
 }
 type ospfAttributes struct {
 	Area int
@@ -58,6 +60,10 @@ type AutonomousSystem struct {
 	OSPF struct {
 		Stubs []int
 	}
+}
+
+func (vpn *VPN) IsHubAndSpoke() bool {
+	return vpn.SpokeSubnets != nil || len(vpn.SpokeSubnets) > 0
 }
 
 func (a *AutonomousSystem) IsOSPFStub(area int) bool {
