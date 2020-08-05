@@ -51,6 +51,9 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				ASN:       i,
 				Neighbors: make(map[string]BGPNbr, n),
 				Disabled:  as.BGP.Disabled,
+				Redistribute: RouteRedistribution{
+					ConnectedOwn: true,
+				},
 			}
 
 			if is4 {
@@ -75,6 +78,9 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 			igp := strings.ToUpper(as.IGP)
 			switch igp {
 			case "OSPF":
+				if as.BGP.RedistributeIGP {
+					c.BGP.Redistribute.OSPF = true
+				}
 				// Check if we need to setup OSPFv2 or OSPFv3
 				if !is4 {
 					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
@@ -101,9 +107,6 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				})
 				c.IGP = append(c.IGP, oCfg)
 
-				if as.BGP.RedistributeIGP {
-					c.BGP.Redistribute.OSPF = true
-				}
 				break
 			case "IS-IS", "ISIS":
 				if as.BGP.RedistributeIGP {
@@ -690,6 +693,14 @@ route-map PROVIDER_IN permit 10
 	sep(dst)
 }
 
+func writePrefixItems(dst io.Writer, prefix string, order int) {
+	sep(dst)
+	fmt.Fprintln(dst, "ip prefix-list OWN_PREFIX permit", prefix, "le 32")
+	fmt.Fprintln(dst, "route-map OWN_PREFIX permit", order)
+	fmt.Fprintln(dst, " match ip address prefix-list OWN_PREFIX")
+	sep(dst)
+}
+
 func WriteConfig(c FRRConfig) {
 	genDir := utils.GetDirectoryFromKey("ConfigDir", "")
 	var filename string
@@ -747,6 +758,11 @@ password topomate
 			break
 		}
 	}
+
+	for n, p := range c.BGP.Networks {
+		writePrefixItems(dst, p, n+1)
+	}
+
 	if c.MPLS {
 		c.writeMPLS(dst)
 	}

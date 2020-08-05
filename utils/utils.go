@@ -144,13 +144,17 @@ func PullImages() {
 }
 
 func StartFrr(cName string) {
-	out, err := exec.Command(
+	cmd := exec.Command(
 		"docker",
 		"exec",
 		cName,
 		"/usr/lib/frr/frrinit.sh",
 		"start",
-	).CombinedOutput()
+	)
+	out, err := cmd.CombinedOutput()
+	if config.VFlag {
+		fmt.Println(cmd)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s %v\n", cName, string(out), err)
 	}

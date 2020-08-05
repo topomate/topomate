@@ -84,11 +84,12 @@ type OSPF6Config struct {
 }
 
 type RouteRedistribution struct {
-	Static    bool
-	OSPF      bool
-	Connected bool
-	ISIS      bool
-	BGP       bool
+	Static       bool
+	OSPF         bool
+	Connected    bool
+	ConnectedOwn bool
+	ISIS         bool
+	BGP          bool
 }
 
 type IGPIfConfig interface {
