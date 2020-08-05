@@ -20,6 +20,9 @@ func (r RouteRedistribution) Write(w io.Writer, indent int) {
 	if r.Connected {
 		writeWithIndent(w, indent, "redistribute connected")
 	}
+	if r.ConnectedOwn {
+		writeWithIndent(w, indent, "redistribute connected route-map OWN_PREFIX")
+	}
 	if r.Static {
 		writeWithIndent(w, indent, "redistribute static")
 	}
