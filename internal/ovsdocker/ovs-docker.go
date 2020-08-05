@@ -24,6 +24,7 @@ type PortSettings struct {
 	Speed  int
 	OFPort int
 	VRF    string
+	IP     string
 }
 
 type OVSDockerClient struct {
@@ -274,6 +275,13 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		}
 	}
 
+	// Add IP if specified
+	if settings.IP != "" {
+		if err := c.ExecNS("ip", "a", "add", "dev", ifName, settings.IP); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -358,6 +366,9 @@ func AddToBridgeBulk(elements map[string][]OVSInterface) error {
 	size := 0
 	for _, v := range elements {
 		size += len(v)
+	}
+	if size == 0 {
+		return nil
 	}
 
 	cmdArgs := make([]string, 1, 16*size)

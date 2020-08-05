@@ -13,6 +13,7 @@ type BaseConfig struct {
 	ExternalFile string         `yaml:"external_links_file"`
 	External     []ExternalLink `yaml:"external_links"`
 	IXPs         []IXPConfig    `yaml:"ixps"`
+	RPKI         RPKIConfig
 }
 
 type GlobalConfig struct {
@@ -120,4 +121,15 @@ type OSPFConfig struct {
 	// 	Routers  []int    `yaml:"routers,flow"`
 	// 	Stub     bool     `yaml:"stub"`
 	// } `yaml:"areas"`
+}
+
+type RPKIConfig struct {
+	// ASN        int      `yaml:"asn"`
+	Hostname string
+	Address  string `yaml:"server_address"`
+	// NeighborAS []string `yaml:"neighbors_as,flow"`
+	RouterLink struct {
+		ASN      int `yaml:"asn"`
+		RouterID int `yaml:"router_id"`
+	} `yaml:"linked_to"`
 }

@@ -611,7 +611,9 @@ func writeInterface(dst io.Writer, name string, c IfConfig) {
 		fmt.Fprintln(dst, " description", c.Description)
 	}
 	for _, ip := range c.IPs {
-		fmt.Fprintln(dst, " ip address", ip.String())
+		if len(ip.IP) > 0 {
+			fmt.Fprintln(dst, " ip address", ip.String())
+		}
 	}
 	for _, i := range c.IGPConfig {
 		i.Write(dst)

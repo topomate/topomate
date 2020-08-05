@@ -43,15 +43,17 @@ type ospfAttributes struct {
 
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
-	ASN     int
-	IGP     string
-	MPLS    bool
-	Network Net
-	LoStart net.IPNet
-	Routers []*Router
-	Links   []Link
-	VPN     []VPN
-	BGP     struct {
+	ASN       int
+	IGP       string
+	MPLS      bool
+	Network   Net
+	LoStart   net.IPNet
+	Routers   []*Router
+	Hosts     []*Host
+	Links     []Link
+	HostLinks []HostLink
+	VPN       []VPN
+	BGP       struct {
 		Disabled        bool
 		RedistributeIGP bool
 	}
@@ -109,7 +111,7 @@ func (a AutonomousSystem) getRouter(n interface{}) *Router {
 	return a.Routers[idx-1]
 }
 
-// TotalContainres returns the total number of containers needed for the AS
+// TotalContainres returns the total number of router containers needed for the AS
 // (= P + PE + CE)
 func (a *AutonomousSystem) TotalContainers() int {
 	res := len(a.Routers)
@@ -211,15 +213,6 @@ func (a *AutonomousSystem) linkRouters(ibgp bool) {
 		}
 
 		// Add IGP configuration elements
-
-		// switch strings.ToUpper(a.IGP) {
-		// case "ISIS", "IS-IS":
-		// 	first.Interface.IGP.ISIS.Circuit = second.Router.IGP.ISIS.Level
-		// 	second.Interface.IGP.ISIS.Circuit = first.Router.IGP.ISIS.Level
-		// 	break
-		// default:
-		// 	break
-		// }
 
 		if a.IGPType() == IGPISIS {
 			sameArea := second.Router.IGP.ISIS.Area == first.Router.IGP.ISIS.Area

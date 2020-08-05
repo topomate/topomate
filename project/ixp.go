@@ -157,7 +157,7 @@ func (p *Project) ApplyIXPLinks() {
 	}
 }
 
-func (p *Project) RemoteIXPLinks() {
+func (p *Project) RemoveIXPLinks() {
 	for _, ixp := range p.IXPs {
 		brName := fmt.Sprintf("ixp-%d", ixp.ASN)
 		link.DeleteBridge(brName)

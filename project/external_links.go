@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	NoRel    = iota
 	Provider = iota
 	Customer = iota
 	Peer     = iota

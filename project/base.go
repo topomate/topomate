@@ -22,10 +22,11 @@ import (
 
 // Project is the main struct of topomate
 type Project struct {
-	Name     string
-	AS       map[int]*AutonomousSystem
-	Ext      []*ExternalLink
-	IXPs     []IXP
+	Name string
+	AS   map[int]*AutonomousSystem
+	Ext  []*ExternalLink
+	IXPs []IXP
+
 	AllLinks ovsdocker.OVSBulk
 }
 
@@ -68,10 +69,12 @@ func ReadConfig(path string) *Project {
 
 		// Copy informations from the config
 		proj.AS[k.ASN] = &AutonomousSystem{
-			ASN:     k.ASN,
-			IGP:     k.IGP,
-			MPLS:    k.MPLS,
-			Routers: make([]*Router, k.NumRouters),
+			ASN:       k.ASN,
+			IGP:       k.IGP,
+			MPLS:      k.MPLS,
+			Routers:   make([]*Router, k.NumRouters),
+			Hosts:     make([]*Host, 0, 4),
+			HostLinks: make([]HostLink, 0, 4),
 		}
 
 		if config.VFlag {
@@ -90,13 +93,16 @@ func ReadConfig(path string) *Project {
 			if err != nil {
 				utils.Fatalln(err)
 			}
-			a.Network = Net{
-				IPNet: n,
-				NextAvailable: &net.IPNet{
-					IP:   cidr.Inc(n.IP),
-					Mask: n.Mask,
-				},
+			cur, max := n.Mask.Size()
+			s, _ := cidr.Subnet(n, max-2-cur, 0)
+			if err != nil {
+				utils.Fatalln(err)
 			}
+			a.Network = Net{
+				IPNet:         n,
+				NextAvailable: s,
+			}
+
 		}
 
 		var loNet *net.IPNet
@@ -234,7 +240,6 @@ func ReadConfig(path string) *Project {
 			}
 		}
 	} else {
-
 		for _, k := range conf.External {
 			proj.parseExternal(k)
 		}
@@ -247,6 +252,9 @@ func ReadConfig(path string) *Project {
 		proj.IXPs[i] = proj.parseIXPConfig(ixpCfg)
 		proj.IXPs[i].linkIXP()
 	}
+
+	/******************************* RPKI setup *******************************/
+	proj.parseRPKIConfig(conf.RPKI)
 	return proj
 }
 
@@ -294,7 +302,7 @@ func (p *Project) StartAll(linksFlag string) {
 	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
 		totalContainers := v.TotalContainers()
-		wg.Add(totalContainers)
+		wg.Add(totalContainers + len(v.Hosts))
 		wgTotal += totalContainers
 		// Create containers for provider routers
 		for i := 0; i < len(v.Routers); i++ {
@@ -330,6 +338,14 @@ func (p *Project) StartAll(linksFlag string) {
 				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
 		}
+
+		// Create containers for other hosts
+		for i := 0; i < len(v.Hosts); i++ {
+			go func(h Host, wg *sync.WaitGroup) {
+				h.StartContainer(nil)
+				wg.Done()
+			}(*v.Hosts[i], &wg)
+		}
 	}
 	// Create containers for IXPs
 	for i := 0; i < len(p.IXPs); i++ {
@@ -358,6 +374,7 @@ func (p *Project) StartAll(linksFlag string) {
 	switch strings.ToLower(linksFlag) {
 	case "internal":
 		p.ApplyInternalLinks()
+		p.ApplyHostLinks()
 		break
 	case "external":
 		p.ApplyExternalLinks()
@@ -367,6 +384,7 @@ func (p *Project) StartAll(linksFlag string) {
 		break
 	default:
 		p.ApplyInternalLinks()
+		p.ApplyHostLinks()
 		p.ApplyExternalLinks()
 		p.ApplyIXPLinks()
 		break
@@ -382,7 +400,7 @@ func (p *Project) StopAll() {
 	var wg sync.WaitGroup
 	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
-		wg.Add(v.TotalContainers())
+		wg.Add(v.TotalContainers() + len(v.Hosts))
 		// Provider
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
@@ -411,6 +429,13 @@ func (p *Project) StopAll() {
 				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
 			}
 		}
+
+		for i := 0; i < len(v.Hosts); i++ {
+			go func(h Host, wg *sync.WaitGroup) {
+				h.StopContainer(nil)
+				wg.Done()
+			}(*v.Hosts[i], &wg)
+		}
 	}
 	for i := 0; i < len(p.IXPs); i++ {
 		go func(r Router, wg *sync.WaitGroup, path string) {
@@ -421,7 +446,8 @@ func (p *Project) StopAll() {
 	wg.Wait()
 	p.RemoveInternalLinks()
 	p.RemoveExternalLinks()
-	p.RemoteIXPLinks()
+	p.RemoveIXPLinks()
+	p.RemoveHostLinks()
 	os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
 }
 
@@ -545,6 +571,42 @@ func (p *Project) RemoveExternalLinks() {
 		)
 
 		link.DeleteBridge(brName)
+	}
+}
+
+func (p *Project) ApplyHostLinks() {
+	for n, as := range p.AS {
+		for _, v := range as.HostLinks {
+			brName := fmt.Sprintf("AS%d-%s-%s", n, v.Router.Router.Hostname, v.Host.Host.Hostname)
+			link.CreateBridge(brName)
+			settings := ovsdocker.DefaultParams()
+			hostIf := ovsdocker.OVSInterface{}
+
+			settings.Speed = v.Router.Interface.Speed
+			link.AddPortToContainer(brName, v.Router.Interface.IfName, v.Router.Router.ContainerName, settings, &hostIf, true)
+			if _, ok := p.AllLinks[v.Router.Router.ContainerName]; !ok {
+				p.AllLinks[v.Router.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+			}
+			p.AllLinks[v.Router.Router.ContainerName] = append(p.AllLinks[v.Router.Router.ContainerName], hostIf)
+
+			settings.Speed = v.Host.Interface.Speed
+			settings.IP = v.Host.Interface.IP.String()
+			link.AddPortToContainer(brName, v.Host.Interface.IfName, v.Host.Host.ContainerName, settings, &hostIf, true)
+
+			if _, ok := p.AllLinks[v.Host.Host.ContainerName]; !ok {
+				p.AllLinks[v.Host.Host.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+			}
+			p.AllLinks[v.Host.Host.ContainerName] = append(p.AllLinks[v.Host.Host.ContainerName], hostIf)
+		}
+	}
+}
+
+func (p *Project) RemoveHostLinks() {
+	for n, as := range p.AS {
+		for _, v := range as.HostLinks {
+			brName := fmt.Sprintf("AS%d-%s-%s", n, v.Router.Router.Hostname, v.Host.Host.Hostname)
+			link.DeleteBridge(brName)
+		}
 	}
 }
 
