@@ -1,0 +1,424 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Specification file &mdash; Topomate  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Quick Start Guide" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Topomate
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Specification file</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-settings">General settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#autonomous-systems">Autonomous Systems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#routing-protocols-options">Routing protocols options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#external-links">External links</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ixp">IXP</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Topomate</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Specification file</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/specs.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="specification-file">
+<h1>Specification file<a class="headerlink" href="#specification-file" title="Permalink to this headline">¶</a></h1>
+<p>This page describes the different elements you can configure in a specification
+file.</p>
+<div class="section" id="general-settings">
+<h2>General settings<a class="headerlink" href="#general-settings" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>name<span class="classifier">string</span></dt><dd><p>Name of the subdirectory where configuration files will be generated.
+It defaults to “generated” if the key is absent.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="autonomous-systems">
+<h2>Autonomous Systems<a class="headerlink" href="#autonomous-systems" title="Permalink to this headline">¶</a></h2>
+<dl>
+<dt>autonomous_systems<span class="classifier">array</span></dt><dd><p>Describe the different AS of the topology.</p>
+<dl>
+<dt>asn<span class="classifier">int</span></dt><dd><p>AS number.</p>
+</dd>
+<dt>routers:</dt><dd><p>Number of routers in the AS.
+.. note:: Generated routers will be referred by an index (starting from 1) in multiple configuration elements</p>
+</dd>
+<dt>loopback_start<span class="classifier">string</span></dt><dd><p>Loopback address of the first router.
+Following routers will use contiguous addresses.</p>
+</dd>
+<dt>igp<span class="classifier">string</span></dt><dd><p>IGP used in the AS.</p>
+<p>Recognized values: IS-IS, OSPF</p>
+</dd>
+<dt>prefix<span class="classifier">string</span></dt><dd><p>Prefix used by the AS. It will also be used to auto-assign IP addresses to the
+different interfaces.</p>
+</dd>
+<dt>mpls<span class="classifier">bool</span></dt><dd><p>Enable MPLS in the AS. Defaults to <strong>false</strong>.</p>
+</dd>
+<dt>links</dt><dd><p>Internal links specification.</p>
+<blockquote>
+<div><dl>
+<dt>kind<span class="classifier">string</span></dt><dd><p>Kind of interconnexion to use.</p>
+<p>Supported values: full-mesh, ring, manual.</p>
+</dd>
+<dt>subnet_length<span class="classifier">int</span></dt><dd><p>Subnet length that will be used to auto-assign IP addresses for the different
+interfaces.</p>
+</dd>
+<dt>file<span class="classifier">string</span></dt><dd><p>Path (relative to the configuration file, or absolute) a file containing
+the links specification.
+Only valid if using a manual configuration.
+Uses the following format :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">router_id_A</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">router_id_b</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">speed</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">igp_cost_a</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">igp_cost_b</span><span class="o">&gt;</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>If only one IGP cost is set, it will be applied to both interfaces.
+If you want to set it to only one interface, use <cite>*</cite> on the other.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="mi">2</span> <span class="mi">1000</span> <span class="mi">63</span> <span class="mi">32</span>
+<span class="mi">4</span> <span class="mi">3</span> <span class="mi">1000</span> <span class="mi">48</span>
+<span class="mi">2</span> <span class="mi">3</span> <span class="mi">1000</span> <span class="o">**</span> <span class="mi">10</span>
+<span class="mi">2</span> <span class="mi">5</span> <span class="mi">1000</span>
+<span class="mi">3</span> <span class="mi">5</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="section" id="routing-protocols-options">
+<h3>Routing protocols options<a class="headerlink" href="#routing-protocols-options" title="Permalink to this headline">¶</a></h3>
+<p>There are optional keys available to customize the routing protocols futher.</p>
+<dl>
+<dt>bgp</dt><dd><p>BGP settings</p>
+<dl>
+<dt>ibgp</dt><dd><p>iBGP settings</p>
+<blockquote>
+<div><dl>
+<dt>disabled<span class="classifier">bool</span></dt><dd><p>If set, BGP configuration won’t be generated</p>
+</dd>
+<dt>redistribute_igp<span class="classifier">bool</span></dt><dd><p>If set, an attribute to redistribute the routes from the IGP in use will
+be added to the BGP process</p>
+</dd>
+<dt>manual<span class="classifier">bool</span></dt><dd><p>If set, the iBGP sessions won’t be use the automatic pattern
+(1 session / neighbor directly connected)</p>
+</dd>
+<dt>route_reflectors<span class="classifier">array</span></dt><dd><p>Route-Reflectors settings</p>
+<dl class="simple">
+<dt>router<span class="classifier">int</span></dt><dd><p>ID of the router that will be a route-reflector</p>
+</dd>
+<dt>clients<span class="classifier">array (int)</span></dt><dd><p>IDs of the RR clients</p>
+</dd>
+</dl>
+</dd>
+<dt>cliques<span class="classifier">array (array (int))</span></dt><dd><p>IDs of routers that have a full-mesh (clique) iBGP neighborhood</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+<dt>isis</dt><dd><p>IS-IS settings</p>
+<dl>
+<dt>level-1<span class="classifier">array (int)</span></dt><dd><p>IDs of L1 routers</p>
+</dd>
+<dt>level-2<span class="classifier">array (int)</span></dt><dd><p>IDs of L2 routers</p>
+</dd>
+<dt>level-1-2<span class="classifier">array (int)</span></dt><dd><p>IDs of L1-L2 routers</p>
+</dd>
+<dt>areas<span class="classifier">map (int, array (int))</span></dt><dd><p>Describes the different areas (area as a key, array of router IDs as value)</p>
+<p><strong>Example</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">isis</span><span class="p">:</span>
+  <span class="nt">level-1</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span> <span class="nv">4</span><span class="p p-Indicator">]</span>
+  <span class="nt">level-2</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">5</span><span class="p p-Indicator">]</span>
+  <span class="nt">level-1-2</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span> <span class="nv">3</span><span class="p p-Indicator">]</span>
+  <span class="nt">areas</span><span class="p">:</span>
+    <span class="nt">1</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span> <span class="nv">2</span><span class="p p-Indicator">]</span>
+    <span class="nt">2</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span> <span class="nv">4</span><span class="p p-Indicator">]</span>
+    <span class="nt">3</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">5</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd>
+<dt>ospf</dt><dd><p>OSPF settings</p>
+<dl>
+<dt>networks<span class="classifier">array</span></dt><dd><p>Describes the diffrent networks</p>
+<dl class="simple">
+<dt>prefix<span class="classifier">string</span></dt><dd><p>Network prefix</p>
+</dd>
+<dt>area<span class="classifier">int</span></dt><dd><p>Area for the prefix</p>
+</dd>
+<dt>routers<span class="classifier">array (int)</span></dt><dd><p>IDs of routers with this network configured</p>
+</dd>
+</dl>
+</dd>
+<dt>stubs<span class="classifier">array (int)</span></dt><dd><p>Areas that are stubs</p>
+</dd>
+</dl>
+<p><strong>Example</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ospf</span><span class="p">:</span>
+  <span class="nt">networks</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">192.168.1.1/24</span>
+      <span class="nt">area</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+      <span class="nt">routers</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span> <span class="nv">3</span><span class="p p-Indicator">,</span> <span class="nv">5</span><span class="p p-Indicator">]</span>
+    <span class="p p-Indicator">-</span> <span class="nt">prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">192.168.1.1/24</span>
+      <span class="nt">area</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+      <span class="nt">routers</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">]</span>
+    <span class="p p-Indicator">-</span> <span class="nt">prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">192.168.1.1/24</span>
+      <span class="nt">area</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+      <span class="nt">routers</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">4</span><span class="p p-Indicator">]</span>
+  <span class="nt">stubs</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span> <span class="nv">4</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="external-links">
+<h2>External links<a class="headerlink" href="#external-links" title="Permalink to this headline">¶</a></h2>
+<dl>
+<dt>external_links_file</dt><dd><p>Path to the file describing the external links of the topology.</p>
+<p>The file must be of the following format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">ASN1</span><span class="o">&gt;.&lt;</span><span class="n">router_number</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">ASN2</span><span class="o">&gt;.&lt;</span><span class="n">router_number</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">relation</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">speed</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>Supported relations:</dt><dd><ul class="simple">
+<li><p><strong>p2c</strong>: provider-customer</p></li>
+<li><p><strong>c2p</strong>: customer-provider</p></li>
+<li><p><strong>p2p</strong>: peer-to-peer</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Example</strong></p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mf">1.1</span> <span class="mf">2.1</span> <span class="n">p2c</span> <span class="mi">10000</span>
+<span class="mf">2.1</span> <span class="mf">3.1</span> <span class="n">p2p</span> <span class="mi">10000</span>
+<span class="mf">2.1</span> <span class="mf">4.1</span> <span class="n">p2c</span> <span class="mi">10000</span>
+</pre></div>
+</div>
+</div></blockquote>
+</dd>
+</dl>
+</div>
+<div class="section" id="ixp">
+<h2>IXP<a class="headerlink" href="#ixp" title="Permalink to this headline">¶</a></h2>
+<p>Topomate allows you to simulate <strong>I</strong>nternet <strong>E</strong>xchange <strong>P</strong>oints.</p>
+<dl>
+<dt>ixps<span class="classifier">array</span></dt><dd><p>Describe the IXPs</p>
+<dl>
+<dt>asn<span class="classifier">int</span></dt><dd><p>ASN of the IXP</p>
+</dd>
+<dt>prefix<span class="classifier">string</span></dt><dd><p>Network prefix used by the routers participating in the IXP (usually local,
+won’t be advertised)</p>
+</dd>
+<dt>loopback<span class="classifier">string</span></dt><dd><p>Loopback address of the route-server</p>
+</dd>
+<dt>peers<span class="classifier">array (string)</span></dt><dd><p>Routers connected to the IXP, in the following format :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">ASN</span><span class="o">&gt;.&lt;</span><span class="n">router_ID</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">speed</span><span class="o">&gt;</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd>
+</dl>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick Start Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Paul HENG
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

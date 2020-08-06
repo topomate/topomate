@@ -1,0 +1,374 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Quick Start Guide &mdash; Topomate  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Specification file" href="specs.html" />
+    <link rel="prev" title="Installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Topomate
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-configuration">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-the-network-topology">Starting the network topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stopping-the-topology">Stopping the topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#only-generate-configuration-files">Only generate configuration files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="specs.html">Specification file</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Topomate</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Quick Start Guide</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/quickstart.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="quick-start-guide">
+<h1>Quick Start Guide<a class="headerlink" href="#quick-start-guide" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>Topomate does not require to be run as root, but you will need to have sudo
+rights (as many commands will be called with sudo internally).</p>
+<p>You can also use the commands with <cite>sudo</cite>, the application will detect your
+own home directory automatically.</p>
+</div>
+<div class="section" id="basic-configuration">
+<h2>Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permalink to this headline">¶</a></h2>
+<p>We’ll define a simple configuration with 2 AS (AS1 and AS2).</p>
+<p>First, we’ll describe the specification of AS1. Let’s say that AS1 is made of
+4 routers using a full-mesh topology, and that it administrates the
+<cite>10.1.1.1/24</cite> prefix. <cite>/30</cite> networks will be used to interconnect the different
+routers. We also specify a name that will be the directory where the
+configuration files will be put (defaults to “generated” if the key is not
+present).</p>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="nt">name</span><span class="p">:</span> <span class="s">&quot;quickstart_topology&quot;</span>
+
+ <span class="nt">autonomous_systems</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
+    <span class="nt">links</span><span class="p">:</span>
+      <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
+      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
+</pre></div>
+</td></tr></table></div>
+<p>Now, we will specify the loopback addresses of the routers. The configuration
+uses the <cite>loopback_start</cite> element, that will be the loopback address of the
+first router of the AS. The other routers will use contiguous addresses (i.e: R2
+will have the <cite>172.16.10.2/32</cite> address).</p>
+<p>We will also specify which IGP to use, here it is OSPF. We want our BGP
+configuration to redistribute prefixes learnt by OSPF so we set the
+<cite>redistribute_igp</cite> element to <cite>true</cite>.</p>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
+    <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.10.1/32&#39;</span>
+    <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
+    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">links</span><span class="p">:</span>
+      <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
+      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
+</pre></div>
+</td></tr></table></div>
+<p>AS1 is now specified. We can do the same process for AS2.</p>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
+    <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.10.1/32&#39;</span>
+    <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
+    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">links</span><span class="p">:</span>
+      <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
+      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
+  <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+    <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+    <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.20.1/32&#39;</span>
+    <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
+    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.2.0/24&#39;</span>
+    <span class="nt">links</span><span class="p">:</span>
+      <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
+      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
+</pre></div>
+</td></tr></table></div>
+<p>We will then describe the external links (between AS1 and AS2). Here, we will
+set AS1 as a provider and AS2 as a customer.</p>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">external_links</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">from</span><span class="p">:</span>
+      <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+      <span class="nt">router_id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">to</span><span class="p">:</span>
+      <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+      <span class="nt">router_id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">rel</span><span class="p">:</span> <span class="s">&#39;p2c&#39;</span>
+</pre></div>
+</td></tr></table></div>
+<p>Here, the relation is provider-customer (<cite>p2c</cite>), so the router specified in
+<cite>from</cite> will be the provider. If you want to reverse the relationship, you can
+either invert the <cite>from</cite> and <cite>to</cite> specification, or you can set the relation to
+<cite>c2p</cite>.</p>
+</div>
+<div class="section" id="starting-the-network-topology">
+<h2>Starting the network topology<a class="headerlink" href="#starting-the-network-topology" title="Permalink to this headline">¶</a></h2>
+<p>To start a network topology, simply run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate start /path/to/config/file.yaml
+</pre></div>
+</div>
+</div>
+<div class="section" id="stopping-the-topology">
+<h2>Stopping the topology<a class="headerlink" href="#stopping-the-topology" title="Permalink to this headline">¶</a></h2>
+<p>To stop a topology, use the <cite>stop</cite> command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate stop /path/to/config/file.yaml
+</pre></div>
+</div>
+</div>
+<div class="section" id="only-generate-configuration-files">
+<h2>Only generate configuration files<a class="headerlink" href="#only-generate-configuration-files" title="Permalink to this headline">¶</a></h2>
+<p>If you only want the FRR configuration files, you can use the <cite>generate</cite> command.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate generate /path/to/config/file.yaml
+</pre></div>
+</div>
+<p>By default, the configurations will be generated in your home directory using
+the following path format: <cite>~/topomate/&lt;config_dir&gt;/conf_&lt;ASN&gt;_&lt;hostname&gt;</cite>
+(i.e. <cite>~/quickstart_topology/conf_1_R3</cite>).</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="specs.html" class="btn btn-neutral float-right" title="Specification file" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Paul HENG
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
