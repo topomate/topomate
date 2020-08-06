@@ -31,18 +31,21 @@ external_links:
     to:
       asn: 1001
       router_id: 1
+    rel: "p2p"
   - from:
       asn: 1003
       router_id: 1
     to:
       asn: 1002
       router_id: 1
+    rel: "p2p"
   - from:
       asn: 2001
       router_id: 1
     to:
       asn: 1003
       router_id: 1
+    rel: "p2p"
 
 rpki:
   linked_to:

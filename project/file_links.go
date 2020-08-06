@@ -25,17 +25,25 @@ func (a *AutonomousSystem) internalFromFile(path string) []Link {
 			continue
 		}
 		fields := strings.Fields(line)
+
+		if len(fields) < 2 {
+			utils.Fatalln("internalFromFile: not enough fields (must be at least 2)")
+		}
+
 		l := Link{
 			First:  NewLinkItem(a.getRouter(fields[0])),
 			Second: NewLinkItem(a.getRouter(fields[1])),
 		}
-		speed, err := strconv.Atoi(fields[2])
-		if err != nil {
-			utils.Fatalf("internalFromFile: error parsing speed at line %d, %v\n", current, err)
-		}
 
-		l.First.Interface.SetSpeedAndCost(speed)
-		l.Second.Interface.SetSpeedAndCost(speed)
+		if len(fields) > 2 {
+			speed, err := strconv.Atoi(fields[2])
+			if err != nil {
+				utils.Fatalf("internalFromFile: error parsing speed at line %d, %v\n", current, err)
+			}
+
+			l.First.Interface.SetSpeedAndCost(speed)
+			l.Second.Interface.SetSpeedAndCost(speed)
+		}
 
 		// If ISIS is used, we don't set a default cost
 		if a.IGPType() == IGPISIS {
@@ -87,6 +95,10 @@ func (p *Project) externalFromFile(path string) {
 		}
 		fields := strings.Fields(line)
 
+		if len(fields) < 2 {
+			utils.Fatalln("internalFromFile: not enough fields (must be at least 2)")
+		}
+
 		from := strings.SplitN(fields[0], ".", 2)
 		to := strings.SplitN(fields[1], ".", 2)
 
@@ -118,29 +130,32 @@ func (p *Project) externalFromFile(path string) {
 			),
 		}
 
-		speed, err := strconv.Atoi(fields[3])
-		if err != nil {
-			utils.Fatalf("externalFromFile: error parsing speed at line %d, %v\n", current, err)
+		if len(fields) > 3 {
+			speed, err := strconv.Atoi(fields[3])
+			if err != nil {
+				utils.Fatalf("externalFromFile: error parsing speed at line %d, %v\n", current, err)
+			}
+			l.From.Interface.SetSpeedAndCost(speed)
+			l.To.Interface.SetSpeedAndCost(speed)
 		}
 
-		l.From.Interface.SetSpeedAndCost(speed)
-		l.To.Interface.SetSpeedAndCost(speed)
-
-		switch strings.ToLower(fields[2]) {
-		case "p2c":
-			l.From.Relation = Provider
-			l.To.Relation = Customer
-			break
-		case "c2p":
-			l.From.Relation = Customer
-			l.To.Relation = Provider
-			break
-		case "p2p":
-			l.From.Relation = Peer
-			l.To.Relation = Peer
-			break
-		default:
-			break
+		if len(fields) > 2 {
+			switch strings.ToLower(fields[2]) {
+			case "p2c":
+				l.From.Relation = Provider
+				l.To.Relation = Customer
+				break
+			case "c2p":
+				l.From.Relation = Customer
+				l.To.Relation = Provider
+				break
+			case "p2p":
+				l.From.Relation = Peer
+				l.To.Relation = Peer
+				break
+			default:
+				break
+			}
 		}
 		l.setupExternal(&p.AS[fromASN].Network.NextAvailable)
 		p.Ext = append(p.Ext, l)
