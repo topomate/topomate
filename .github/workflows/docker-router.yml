@@ -1,0 +1,31 @@
+name: Auto-build Docker images
+
+on:
+  push:
+    paths:
+      - 'images/**'
+
+jobs:
+  build-router:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: topomate/router
+          tags: latest
+          path: images/router
+
+  build-route-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: topomate/route-server
+          tags: latest
+          path: images/route-server-frr

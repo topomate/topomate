@@ -1,9 +1,12 @@
 package project
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,10 +20,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Project is the main struct of topomate
 type Project struct {
-	Name string
-	AS   map[int]*AutonomousSystem
-	Ext  []*ExternalLink
+	Name     string
+	AS       map[int]*AutonomousSystem
+	Ext      []*ExternalLink
+	IXPs     []IXP
+	AllLinks ovsdocker.OVSBulk
 }
 
 // ReadConfig reads a yaml file, parses it and returns a Project
@@ -39,23 +45,33 @@ func ReadConfig(path string) *Project {
 		utils.Fatalln(err)
 	}
 
+	config.ConfigDir = filepath.Dir(path)
+
+	// Init global settings
+	conf.Global.BGP.ToGlobal()
+
 	nbAS := len(conf.AS)
 
 	// Create a project
 	proj := &Project{
 		Name: conf.Name,
 		AS:   make(map[int]*AutonomousSystem, nbAS),
+		Ext:  make([]*ExternalLink, 0, 128),
 	}
 
 	// Iterate on AS elements from the config to fill the project
 	for _, k := range conf.AS {
+		// Basic validation
+		if k.NumRouters < 1 {
+			utils.Fatalf("AS%d: cannot generate AS without routers\n", k.ASN)
+		}
+
 		// Copy informations from the config
 		proj.AS[k.ASN] = &AutonomousSystem{
-			ASN:             k.ASN,
-			IGP:             k.IGP,
-			RedistributeIGP: k.RedistributeIGP,
-			MPLS:            k.MPLS,
-			Routers:         make([]*Router, k.NumRouters),
+			ASN:     k.ASN,
+			IGP:     k.IGP,
+			MPLS:    k.MPLS,
+			Routers: make([]*Router, k.NumRouters),
 		}
 
 		if config.VFlag {
@@ -65,6 +81,9 @@ func ReadConfig(path string) *Project {
 		// Get current AS
 		a := proj.AS[k.ASN]
 
+		a.BGP.RedistributeIGP = k.BGP.RedistributeIGP
+		a.BGP.Disabled = k.BGP.Disabled
+
 		// Parse network prefix
 		if k.Prefix != "" {
 			_, n, err := net.ParseCIDR(k.Prefix)
@@ -73,6 +92,10 @@ func ReadConfig(path string) *Project {
 			}
 			a.Network = Net{
 				IPNet: n,
+				NextAvailable: &net.IPNet{
+					IP:   cidr.Inc(n.IP),
+					Mask: n.Mask,
+				},
 			}
 		}
 
@@ -89,13 +112,14 @@ func ReadConfig(path string) *Project {
 
 		// Generate router elements
 		for i := 0; i < k.NumRouters; i++ {
+			id := i + 1
 			host := "R" + strconv.Itoa(i+1)
 			a.Routers[i] = &Router{
-				ID:            i + 1,
+				ID:            id,
 				Hostname:      host,
 				ContainerName: "AS" + strconv.Itoa(k.ASN) + "-" + host,
 				NextInterface: 0,
-				Neighbors:     make(map[string]BGPNbr, k.NumRouters+nbAS),
+				Neighbors:     make(map[string]*BGPNbr, k.NumRouters+nbAS),
 			}
 
 			// Generate loopback address if needed
@@ -104,52 +128,129 @@ func ReadConfig(path string) *Project {
 					append(a.Routers[i].Loopback, *loNet)
 				loNet.IP = cidr.Inc(loNet.IP)
 			}
+
+			/***************************** IS-IS  *****************************/
+			if a.IGPType() == IGPISIS && k.ISIS.Areas != nil {
+				if lvl := k.ISIS.CheckLevel(id); lvl != 0 {
+					a.Routers[i].IGP.ISIS.Level = lvl
+				}
+				a.Routers[i].IGP.ISIS.Area = k.ISIS.CheckArea(id)
+			}
+
+		}
+		/****************************** OSPF ******************************/
+		if a.IGPType() == IGPOSPF && k.OSPF.Networks != nil {
+			for _, n := range k.OSPF.Networks {
+				// check if network is valid
+				if _, _, err := net.ParseCIDR(n.Prefix); err != nil {
+					utils.Fatalln(err)
+				}
+
+				for _, rID := range n.Routers {
+					r := a.getRouter(rID)
+					if r.IGP.OSPF == nil {
+						r.IGP.OSPF = []OSPFNet{{
+							Prefix: n.Prefix,
+							Area:   n.Area,
+						}}
+					} else {
+						r.IGP.OSPF =
+							append(r.IGP.OSPF, OSPFNet{
+								Prefix: n.Prefix,
+								Area:   n.Area,
+							})
+					}
+				}
+				// a.Routers[i].IGP.OSPF.Networks[n.Prefix] = n.Area
+			}
+			a.OSPF.Stubs = k.OSPF.Stubs
 		}
 
 		// Setup links
 		a.SetupLinks(k.Links)
 
 		a.ReserveSubnets(k.Links.SubnetLength)
-		a.linkRouters()
+		if !k.BGP.IBGP.Manual {
+			a.linkRouters(true)
+		} else {
+			a.linkRouters(false)
+			a.setupIBGP(k.BGP.IBGP)
+		}
 
+		/*********************** Customer routers setup ***********************/
+		a.VPN = make([]VPN, len(k.VPN))
+		for idx, vpn := range k.VPN {
+			a.VPN[idx].VRF = vpn.VRF
+			a.VPN[idx].Customers = make([]VPNCustomer, len(vpn.Customers))
+			a.VPN[idx].Neighbors = make(map[string]bool, len(vpn.Customers))
+			for i, v := range vpn.Customers {
+				_, n, err := net.ParseCIDR(v.Subnet)
+				if err != nil {
+					utils.Fatalln(err)
+				}
+				n.IP = cidr.Inc(n.IP)
+				router := &Router{
+					ID:            i + 1,
+					Hostname:      v.Hostname,
+					Links:         make([]*NetInterface, 1),
+					ContainerName: fmt.Sprintf("AS%d-Cust-%s", k.ASN, v.Hostname),
+				}
+				if v.Loopback != "" {
+					if _, n, err := net.ParseCIDR(v.Loopback); err == nil {
+						router.Loopback = append(router.Loopback, *n)
+					}
+				}
+				parentRouter := a.Routers[v.Parent-1]
+				a.VPN[idx].Customers[i].Router = router
+				a.VPN[idx].Customers[i].Parent = parentRouter
+				a.VPN[idx].Neighbors[parentRouter.LoID()] = true
+				l := Link{
+					First:  NewLinkItem(parentRouter),
+					Second: NewLinkItem(router),
+				}
+				l.First.Interface.IP = *n
+				l.First.Interface.Description =
+					fmt.Sprintf("linked to customer %s", v.Hostname)
+				l.First.Interface.External = true // not exactly part of the AS
+				l.First.Interface.VRF = vpn.VRF
+				n.IP = cidr.Inc(n.IP)
+				l.Second.Interface.IP = *n
+
+				parentRouter.Links = append(parentRouter.Links, l.First.Interface)
+				router.Links[0] = l.Second.Interface
+				a.Links = append(a.Links, l)
+			}
+		}
+		a.linkVPN()
 	}
 
 	/************************** External links setup **************************/
+	if conf.External == nil {
+		if conf.ExternalFile != "" {
+			if filepath.IsAbs(conf.ExternalFile) {
+				proj.externalFromFile(conf.ExternalFile)
+			} else {
+				proj.externalFromFile(config.ConfigDir + "/" + conf.ExternalFile)
+			}
+		}
+	} else {
 
-	for _, k := range conf.External {
-		l := &ExternalLink{
-			From: NewExtLinkItem(
-				k.From.ASN,
-				proj.AS[k.From.ASN].Routers[k.From.RouterID-1],
-			),
-			To: NewExtLinkItem(
-				k.To.ASN,
-				proj.AS[k.To.ASN].Routers[k.To.RouterID-1],
-			),
+		for _, k := range conf.External {
+			proj.parseExternal(k)
 		}
-		switch strings.ToLower(k.Relationship) {
-		case "p2c":
-			l.From.Relation = Provider
-			l.To.Relation = Customer
-			break
-		case "c2p":
-			l.From.Relation = Customer
-			l.To.Relation = Provider
-			break
-		case "p2p":
-			l.From.Relation = Peer
-			l.To.Relation = Peer
-			break
-		default:
-			break
-		}
-		l.setupExternal(&proj.AS[k.From.ASN].Network.NextAvailable)
-		proj.Ext = append(proj.Ext, l)
 	}
 	proj.linkExternal()
+
+	/******************************* IXP setup *******************************/
+	proj.IXPs = make([]IXP, len(conf.IXPs))
+	for i, ixpCfg := range conf.IXPs {
+		proj.IXPs[i] = proj.parseIXPConfig(ixpCfg)
+		proj.IXPs[i].linkIXP()
+	}
 	return proj
 }
 
+// Print displays some informations concerning the project
 func (p *Project) Print() {
 	for n, v := range p.AS {
 		fmt.Println("->AS", n)
@@ -158,9 +259,27 @@ func (p *Project) Print() {
 			for _, l := range r.Links {
 				fmt.Println(l)
 			}
-			for _, b := range r.Neighbors {
-				fmt.Println(b)
+			for id, b := range r.Neighbors {
+				fmt.Println(id, b)
 			}
+		}
+		for _, vpn := range v.VPN {
+			fmt.Println("===", vpn.VRF)
+			fmt.Println(vpn.Neighbors)
+			for _, r := range vpn.Customers {
+				fmt.Println(r.Router.Loopback)
+				for _, l := range r.Router.Links {
+					fmt.Println(l)
+				}
+			}
+		}
+	}
+
+	for _, ixp := range p.IXPs {
+		fmt.Println("=> IXP", ixp.ASN)
+		fmt.Println(ixp.RouteServer.Loopback[0])
+		for _, l := range ixp.Links {
+			fmt.Println(*l.Interface)
 		}
 	}
 }
@@ -169,77 +288,183 @@ func (p *Project) Print() {
 // present the configuration directory, and apply links
 func (p *Project) StartAll(linksFlag string) {
 	var wg sync.WaitGroup
+
+	reloadReady := make(chan struct{}) // will be used to trigger a config reload
+	wgTotal := len(p.IXPs)
+	wg.Add(len(p.IXPs))
 	for asn, v := range p.AS {
-		wg.Add(len(v.Routers))
+		totalContainers := v.TotalContainers()
+		wg.Add(totalContainers)
+		wgTotal += totalContainers
+		// Create containers for provider routers
 		for i := 0; i < len(v.Routers); i++ {
 			configPath := fmt.Sprintf(
 				"%s/conf_%d_%s",
-				utils.GetDirectoryFromKey("config_dir", "~/.topogen"),
+				utils.GetDirectoryFromKey("ConfigDir", ""),
 				asn,
 				v.Routers[i].Hostname,
 			)
 			go func(r Router, wg *sync.WaitGroup, path string) {
 				r.StartContainer(nil, path)
 				wg.Done()
-
+				<-reloadReady // wait until links are applied
+				r.StartFRR()
+				wg.Done()
 			}(*v.Routers[i], &wg, configPath)
 		}
+
+		// Create containers for customers
+		for i := 0; i < len(v.VPN); i++ {
+			for j := 0; j < len(v.VPN[i].Customers); j++ {
+				configPath := fmt.Sprintf(
+					"%s/conf_cust_%s",
+					utils.GetDirectoryFromKey("ConfigDir", ""),
+					v.VPN[i].Customers[j].Router.Hostname,
+				)
+				go func(r Router, wg *sync.WaitGroup, path string) {
+					r.StartContainer(nil, path)
+					wg.Done()
+					<-reloadReady // wait until links are applied
+					r.StartFRR()
+					wg.Done()
+				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
+			}
+		}
+	}
+	// Create containers for IXPs
+	for i := 0; i < len(p.IXPs); i++ {
+		configPath := fmt.Sprintf(
+			"%s/conf_%d_%s",
+			utils.GetDirectoryFromKey("ConfigDir", ""),
+			p.IXPs[i].ASN,
+			p.IXPs[i].RouteServer.Hostname,
+		)
+		go func(r Router, wg *sync.WaitGroup, path string) {
+			r.StartContainer(nil, path)
+			wg.Done()
+			<-reloadReady // wait until links are applied
+			r.StartFRR()
+			wg.Done()
+		}(*p.IXPs[i].RouteServer, &wg, configPath)
 	}
 	wg.Wait()
 
+	if config.VFlag {
+		fmt.Println("Applying links with OVS...")
+	}
+
+	p.AllLinks = make(ovsdocker.OVSBulk, 1024)
+	// currently, internal links must be applied in priority
 	switch strings.ToLower(linksFlag) {
 	case "internal":
 		p.ApplyInternalLinks()
 		break
 	case "external":
 		p.ApplyExternalLinks()
+		p.ApplyIXPLinks()
 		break
 	case "none":
 		break
 	default:
 		p.ApplyInternalLinks()
 		p.ApplyExternalLinks()
+		p.ApplyIXPLinks()
 		break
 	}
+	wg.Add(wgTotal)
+	close(reloadReady) // trigger configuration reload
+	p.saveLinks()
+	wg.Wait()
 }
 
+// StopAll stops all containers and removes all links
 func (p *Project) StopAll() {
 	var wg sync.WaitGroup
-	for _, v := range p.AS {
-		wg.Add(len(v.Routers))
+	wg.Add(len(p.IXPs))
+	for asn, v := range p.AS {
+		wg.Add(v.TotalContainers())
+		// Provider
 		for i := 0; i < len(v.Routers); i++ {
-			go func(r Router, wg *sync.WaitGroup) {
-				r.StopContainer(nil)
+			configPath := fmt.Sprintf(
+				"%s/conf_%d_%s",
+				utils.GetDirectoryFromKey("ConfigDir", ""),
+				asn,
+				v.Routers[i].Hostname,
+			)
+			go func(r Router, wg *sync.WaitGroup, path string) {
+				r.StopContainer(nil, path)
 				wg.Done()
-			}(*v.Routers[i], &wg)
+			}(*v.Routers[i], &wg, configPath)
 		}
+
+		// Customers
+		for i := 0; i < len(v.VPN); i++ {
+			for j := 0; j < len(v.VPN[i].Customers); j++ {
+				configPath := fmt.Sprintf(
+					"%s/conf_cust_%s",
+					utils.GetDirectoryFromKey("ConfigDir", ""),
+					v.VPN[i].Customers[j].Router.Hostname,
+				)
+				go func(r Router, wg *sync.WaitGroup, path string) {
+					r.StopContainer(nil, path)
+					wg.Done()
+				}(*v.VPN[i].Customers[j].Router, &wg, configPath)
+			}
+		}
+	}
+	for i := 0; i < len(p.IXPs); i++ {
+		go func(r Router, wg *sync.WaitGroup, path string) {
+			r.StopContainer(nil, path)
+			wg.Done()
+		}(*p.IXPs[i].RouteServer, &wg, "")
 	}
 	wg.Wait()
 	p.RemoveInternalLinks()
 	p.RemoveExternalLinks()
+	p.RemoteIXPLinks()
+	os.Remove(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
 }
 
-func setupContainerLinks(brName string, links []Link) []ovsdocker.OVSInterface {
+func setupContainerLinks(brName string, links []Link, m ovsdocker.OVSBulk) {
 
 	// Create an OVS bridge
 	link.CreateBridge(brName)
 
 	// Prepare a slice for bulk add to the OVS bridge (better performances)
-	res := make([]ovsdocker.OVSInterface, 0, len(links))
+	// res := make([]ovsdocker.OVSInterface, 0, len(links))
 
+	hostIf := &ovsdocker.OVSInterface{}
+
+	settings := ovsdocker.DefaultParams()
+	settings.OFPort = 1
 	for _, v := range links {
 		idA := v.First.Router.ContainerName
 		idB := v.Second.Router.ContainerName
 		ifA := v.First.Interface.IfName
 		ifB := v.Second.Interface.IfName
 
-		hostIf := ovsdocker.OVSInterface{}
-		link.AddPortToContainer(brName, ifA, idA, &hostIf)
-		res = append(res, hostIf)
-		link.AddPortToContainer(brName, ifB, idB, &hostIf)
-		res = append(res, hostIf)
+		settings.Speed = v.First.Interface.Speed
+		settings.VRF = v.First.Interface.VRF
+
+		link.AddPortToContainer(brName, ifA, idA, settings, hostIf, false)
+		// res = append(res, *hostIf)
+		if _, ok := m[idA]; !ok {
+			m[idA] = make([]ovsdocker.OVSInterface, 0, len(links))
+		}
+		m[idA] = append(m[idA], *hostIf)
+		settings.OFPort++
+
+		settings.Speed = v.Second.Interface.Speed
+		settings.VRF = v.Second.Interface.VRF
+		link.AddPortToContainer(brName, ifB, idB, settings, hostIf, false)
+		// res = append(res, *hostIf)
+		if _, ok := m[idB]; !ok {
+			m[idB] = make([]ovsdocker.OVSInterface, 0, len(links))
+		}
+		m[idB] = append(m[idB], *hostIf)
+		settings.OFPort++
 	}
-	return res
+	// return res
 }
 
 func applyFlow(brName string, links []Link) {
@@ -252,20 +477,16 @@ func applyFlow(brName string, links []Link) {
 	}
 }
 
+// ApplyInternalLinks creates all internal links for each AS of the project
 func (p *Project) ApplyInternalLinks() {
-
-	// Create a map for bulk add to OVS bridge
-	bulk := make(ovsdocker.OVSBulk, len(p.AS))
-
 	for n, as := range p.AS {
 		// Create bridge with name "int-<ASN>"
 		brName := fmt.Sprintf("int-%d", n)
 		// Setup container links
-		bulk[brName] = setupContainerLinks(brName, as.Links)
+		setupContainerLinks(brName, as.Links, p.AllLinks)
 	}
-
 	// Link host interfaces to OVS bridges
-	ovsdocker.AddToBridgeBulk(bulk)
+	ovsdocker.AddToBridgeBulk(p.AllLinks)
 
 	// Apply OpenFlow rules to the bridges
 	for n, as := range p.AS {
@@ -274,12 +495,14 @@ func (p *Project) ApplyInternalLinks() {
 	}
 }
 
+// RemoveInternalLinks removes all internal links of the project
 func (p *Project) RemoveInternalLinks() {
 	for n := range p.AS {
 		link.DeleteBridge(fmt.Sprintf("int-%d", n))
 	}
 }
 
+// ApplyExternalLinks creates all external links between the different AS
 func (p *Project) ApplyExternalLinks() {
 	for _, v := range p.Ext {
 
@@ -291,12 +514,27 @@ func (p *Project) ApplyExternalLinks() {
 		)
 
 		link.CreateBridge(brName)
+		settings := ovsdocker.DefaultParams()
+		hostIf := ovsdocker.OVSInterface{}
 
-		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, nil)
-		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, nil)
+		settings.Speed = v.From.Interface.Speed
+		link.AddPortToContainer(brName, v.From.Interface.IfName, v.From.Router.ContainerName, settings, &hostIf, true)
+		if _, ok := p.AllLinks[v.From.Router.ContainerName]; !ok {
+			p.AllLinks[v.From.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+		}
+		p.AllLinks[v.From.Router.ContainerName] = append(p.AllLinks[v.From.Router.ContainerName], hostIf)
+
+		settings.Speed = v.To.Interface.Speed
+		link.AddPortToContainer(brName, v.To.Interface.IfName, v.To.Router.ContainerName, settings, &hostIf, true)
+
+		if _, ok := p.AllLinks[v.To.Router.ContainerName]; !ok {
+			p.AllLinks[v.To.Router.ContainerName] = make([]ovsdocker.OVSInterface, 0, len(p.Ext))
+		}
+		p.AllLinks[v.To.Router.ContainerName] = append(p.AllLinks[v.To.Router.ContainerName], hostIf)
 	}
 }
 
+// RemoveExternalLinks removes all external links
 func (p *Project) RemoveExternalLinks() {
 	for _, v := range p.Ext {
 		brName := fmt.Sprintf("ext-%d%s-%d%s",
@@ -336,7 +574,7 @@ func (p *Project) linkExternal() {
 
 		rmIn, rmOut := getRouteMaps(lnk.To.Relation, nil, nil)
 		// Add an entry in the neighbors table
-		lnk.From.Router.Neighbors[toID] = BGPNbr{
+		lnk.From.Router.Neighbors[toID] = &BGPNbr{
 			RemoteAS:     lnk.To.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -344,6 +582,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.From.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			AF:           AddressFamily{IPv4: true},
 		}
 
 		// Do the same thing for the second part of the link
@@ -352,7 +591,7 @@ func (p *Project) linkExternal() {
 			append(lnk.To.Router.Links, lnk.To.Interface)
 
 		rmIn, rmOut = getRouteMaps(lnk.From.Relation, nil, nil)
-		lnk.To.Router.Neighbors[fromID] = BGPNbr{
+		lnk.To.Router.Neighbors[fromID] = &BGPNbr{
 			RemoteAS:     lnk.From.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -360,6 +599,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.To.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			AF:           AddressFamily{IPv4: true},
 		}
 	}
 }
@@ -385,4 +625,18 @@ func getRouteMaps(relation int, inMaps []string, outMaps []string) ([]string, []
 	}
 
 	return append(in, inMaps...), append(out, outMaps...)
+}
+
+func (p *Project) saveLinks() {
+	// Save the interfaces configuration in json for restarts
+	j, err := json.Marshal(p.AllLinks)
+	if err != nil {
+		utils.Fatalln(err)
+	}
+	f, err := os.Create(utils.GetDirectoryFromKey("MainDir", "") + "/links.json")
+	if err != nil {
+		utils.Fatalln(err)
+	}
+	defer f.Close()
+	f.Write(j)
 }

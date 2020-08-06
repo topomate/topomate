@@ -1,0 +1,90 @@
+name: "ixp"
+autonomous_systems:
+  - asn: 101
+    routers: 2
+    loopback_start: '10.101.1.1/32'
+    prefix: '192.168.101.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 102
+    routers: 2
+    loopback_start: '10.102.1.1/32'
+    prefix: '192.168.102.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 103
+    routers: 2
+    loopback_start: '10.103.1.1/32'
+    prefix: '192.168.103.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 104
+    routers: 2
+    loopback_start: '10.104.1.1/32'
+    prefix: '192.168.104.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 105
+    routers: 2
+    loopback_start: '10.105.1.1/32'
+    prefix: '192.168.105.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 106
+    routers: 2
+    loopback_start: '10.106.1.1/32'
+    prefix: '192.168.106.0/24'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+  - asn: 300
+    routers: 2
+    loopback_start: '172.16.3.1/32'
+    prefix: '172.30.0.0/16'
+    bgp:
+      redistribute_igp: true
+    igp: 'OSPF'
+    links:
+      kind: 'full-mesh'
+      subnet_length: 30
+
+ixps:
+  - asn: 100
+    prefix: '172.17.17.0/24'
+    loopback: '10.100.100.100/32'
+    peers: [101.1, 102.1, 103.1, 104.2, 105.1, 106.2]
+    # peers:
+    #   - 101.1 1000
+    #   - 102.1
+
+external_links:
+  - from:
+      asn: 300
+      router_id: 1
+    to:
+      asn: 102
+      router_id: 2
+  

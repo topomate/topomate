@@ -3,8 +3,11 @@ package project
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/rahveiz/topomate/config"
+	"github.com/rahveiz/topomate/utils"
 )
 
 const (
@@ -13,6 +16,7 @@ const (
 	Peer     = iota
 )
 
+// ExternalLinkItem represents a side of an ExternalLink
 type ExternalLinkItem struct {
 	ASN       int
 	Router    *Router
@@ -20,11 +24,14 @@ type ExternalLinkItem struct {
 	Relation  int
 }
 
+// ExternalLink represents a link between 2 routers from different AS
 type ExternalLink struct {
 	From *ExternalLinkItem
 	To   *ExternalLinkItem
 }
 
+// NewExtLinkItem returns a poiter to an ExternalLinkItem based on the
+// provided informations
 func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 	ifName := fmt.Sprintf("eth%d", router.NextInterface)
 	router.NextInterface++
@@ -35,16 +42,48 @@ func NewExtLinkItem(asn int, router *Router) *ExternalLinkItem {
 			IfName:   ifName,
 			IP:       net.IPNet{},
 			Speed:    10000,
+			Cost:     10000,
 			External: true,
 		},
 	}
 }
 
-// func NewNetInterfaceExt(router *Router) *NetInterface {
-// 	res := NewNetInterface(router)
-// 	res.External = true
-// 	return res
-// }
+func (p *Project) parseExternal(k config.ExternalLink) {
+	if _, ok := p.AS[k.From.ASN]; !ok {
+		utils.Fatalf("External link error : AS%d does not exist\n", k.From.ASN)
+	}
+	if _, ok := p.AS[k.To.ASN]; !ok {
+		utils.Fatalf("External link error : AS%d does not exist\n", k.To.ASN)
+	}
+	l := &ExternalLink{
+		From: NewExtLinkItem(
+			k.From.ASN,
+			p.AS[k.From.ASN].getRouter(k.From.RouterID),
+		),
+		To: NewExtLinkItem(
+			k.To.ASN,
+			p.AS[k.To.ASN].getRouter(k.To.RouterID),
+		),
+	}
+	switch strings.ToLower(k.Relationship) {
+	case "p2c":
+		l.From.Relation = Provider
+		l.To.Relation = Customer
+		break
+	case "c2p":
+		l.From.Relation = Customer
+		l.To.Relation = Provider
+		break
+	case "p2p":
+		l.From.Relation = Peer
+		l.To.Relation = Peer
+		break
+	default:
+		break
+	}
+	l.setupExternal(&p.AS[k.From.ASN].Network.NextAvailable)
+	p.Ext = append(p.Ext, l)
+}
 
 func (e *ExternalLink) setupExternal(p **net.IPNet) {
 	if p == nil {
@@ -69,7 +108,6 @@ func (e *ExternalLink) setupExternal(p **net.IPNet) {
 	// check if we need to get next subnet
 	if assigned+2 > addrCnt {
 		prefix, _ = cidr.NextSubnet(prefix, prefixLen)
-		assigned = 0
 	}
 
 	(*p).IP = cidr.Inc(prefix.IP)

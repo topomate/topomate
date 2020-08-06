@@ -1,20 +1,76 @@
 package config
 
+const (
+	fromCustomer = 10
+	fromProvider = 20
+	fromPeer     = 30
+)
+
 type BaseConfig struct {
-	Name     string         `yaml:"name,omitempty"`
-	AS       []ASConfig     `yaml:"autonomous_systems"`
-	External []ExternalLink `yaml:"external_links"`
+	Name         string         `yaml:"name,omitempty"`
+	Global       GlobalConfig   `yaml:"global_settings"`
+	AS           []ASConfig     `yaml:"autonomous_systems"`
+	ExternalFile string         `yaml:"external_links_file"`
+	External     []ExternalLink `yaml:"external_links"`
+	IXPs         []IXPConfig    `yaml:"ixps"`
+}
+
+type GlobalConfig struct {
+	BGP GlobalBGPConfig
+}
+
+type GlobalBGPConfig struct {
+	Provider BGPRelationConfig `yaml:"provider,omitempty"`
+	Customer BGPRelationConfig `yaml:"customer,omitempty"`
+	Peer     BGPRelationConfig `yaml:"peer,omitempty"`
+}
+
+type BGPRelationConfig struct {
+	Community int `yaml:"community,omitempty"`
+	LocalPref int `yaml:"local_pref,omitempty"`
 }
 
 type ASConfig struct {
-	ASN             int           `yaml:"asn,omitempty"`
-	NumRouters      int           `yaml:"routers,omitempty"`
-	IGP             string        `yaml:"igp,omitempty"`
-	RedistributeIGP bool          `yaml:"redistribute_igp"`
-	Prefix          string        `yaml:"prefix,omitempty"`
-	LoRange         string        `yaml:"loopback_start,omitempty"`
-	Links           InternalLinks `yaml:"links,omitempty"`
-	MPLS            bool          `yaml:"mpls,omitempty"`
+	ASN        int           `yaml:"asn,omitempty"`
+	NumRouters int           `yaml:"routers,omitempty"`
+	IGP        string        `yaml:"igp,omitempty"`
+	ISIS       ISISConfig    `yaml:"isis"`
+	OSPF       OSPFConfig    `yaml:"ospf"`
+	Prefix     string        `yaml:"prefix,omitempty"`
+	LoRange    string        `yaml:"loopback_start,omitempty"`
+	BGP        BGPConfig     `yaml:"bgp"`
+	Links      InternalLinks `yaml:"links,omitempty"`
+	MPLS       bool          `yaml:"mpls,omitempty"`
+	VPN        []VPNConfig
+}
+
+// type IBGPConfig struct {
+// 	File string `yaml:"file"`
+// }
+
+type IBGPConfig struct {
+	Manual bool
+	RR     []struct {
+		Router  int   `yaml:"router"`
+		Clients []int `yaml:"clients,flow"`
+	} `yaml:"route_reflectors"`
+	Cliques [][]int `yaml:"cliques,flow"`
+}
+
+type BGPConfig struct {
+	IBGP            IBGPConfig `yaml:"ibgp"`
+	Disabled        bool       `yaml:"disabled"`
+	RedistributeIGP bool       `yaml:"redistribute_igp"`
+}
+
+type VPNConfig struct {
+	VRF       string `yaml:"vrf"`
+	Customers []struct {
+		Hostname string `yaml:"hostname"`
+		Loopback string `yaml:"loopback"`
+		Subnet   string `yaml:"subnet"`
+		Parent   int    `yaml:"parent"`
+	} `yaml:"customers"`
 }
 
 type ExternalLinkItem struct {
@@ -32,5 +88,36 @@ type InternalLinks struct {
 	Kind         string              `yaml:"kind"`
 	SubnetLength int                 `yaml:"subnet_length"`
 	Preset       string              `yaml:"preset,omitempty"`
-	Specs        []map[string]string `yaml:"specs"`
+	Specs        []map[string]string `yaml:"specs,omitempty"`
+	Filepath     string              `yaml:"file"`
+}
+
+type IXPConfig struct {
+	ASN      int      `yaml:"asn"`
+	Peers    []string `yaml:"peers,flow"`
+	Prefix   string   `yaml:"prefix"`
+	Loopback string   `yaml:"loopback"`
+}
+
+type ISISConfig struct {
+	L1    []int         `yaml:"level-1,flow"`
+	L2    []int         `yaml:"level-2,flow"`
+	L12   []int         `yaml:"level-1-2,flow"`
+	Areas map[int][]int `yaml:"areas,flow"`
+}
+
+type networkOSPF struct {
+	Prefix  string `yaml:"prefix"`
+	Area    int    `yaml:"area"`
+	Routers []int  `yaml:"routers,flow"`
+}
+
+type OSPFConfig struct {
+	Networks []networkOSPF `yaml:"networks"`
+	Stubs    []int         `yaml:"stubs"`
+	// Areas map[int]struct {
+	// 	Networks []string `yaml:"networks,flow"`
+	// 	Routers  []int    `yaml:"routers,flow"`
+	// 	Stub     bool     `yaml:"stub"`
+	// } `yaml:"areas"`
 }

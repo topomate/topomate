@@ -1,18 +1,3 @@
-/*
-Copyright © 2020 NAME HERE <EMAIL ADDRESS>
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package cmd
 
 import (
@@ -25,20 +10,29 @@ import (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start a network topology",
+	Long: `Start a network topology using the provided configuration files.
+Automatically creates Docker containers, network links and FRR configuration files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
 
-		foo := frr.GenerateConfig(newConf)
-		frr.WriteAll(foo)
+		if n, err := cmd.Flags().GetBool("no-generate"); err == nil {
+			if !n {
+				foo := frr.GenerateConfig(newConf)
+				frr.WriteAll(foo)
+			}
+		} else {
+			utils.Fatalln(err)
+		}
 		links, err := cmd.Flags().GetString("links")
 		if err != nil {
+			utils.Fatalln(err)
+		}
+		if nopull, err := cmd.Flags().GetBool("no-pull"); err == nil {
+			if !nopull {
+				utils.PullImages()
+			}
+		} else {
 			utils.Fatalln(err)
 		}
 		newConf.StartAll(links)
@@ -50,6 +44,8 @@ func init() {
 	startCmd.Flags().StringP("project", "p", "", "Project name")
 	startCmd.Flags().IntSliceVar(&config.ASOnly, "as", nil, "Start only specified AS")
 	startCmd.Flags().String("links", "all", `Restrict which links should be applied (all, internal, external, none). Defaults to all.`)
+	startCmd.Flags().Bool("no-generate", false, "Do not generate configuration files")
+	startCmd.Flags().Bool("no-pull", false, "Do not pull docker image from DockerHub.")
 
 	// Here you will define your flags and configuration settings.
 

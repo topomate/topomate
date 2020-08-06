@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/digitalocean/go-openvswitch/ovs"
+	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/internal/ovsdocker"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -30,11 +31,11 @@ func DeleteBridge(name string) {
 
 // AddPortToContainer links a container to an OVS bridge, creating an interface on the container network namespace
 // using a veth pair.
-// If bulk is provided, it fills it with the settings of the host part of the veth.
-// If bulk is nil, it adds the host part of the veth to the OVS bridge.
-func AddPortToContainer(brName, ifName, containerName string, hostIf *ovsdocker.OVSInterface) {
+func AddPortToContainer(brName, ifName, containerName string,
+	settings ovsdocker.PortSettings, hostIf *ovsdocker.OVSInterface,
+	bridge bool) {
 	c := ovsdocker.New(containerName)
-	if err := c.AddPort(brName, ifName, ovsdocker.DefaultParams(), hostIf); err != nil {
+	if err := c.AddPort(brName, ifName, settings, hostIf, bridge); err != nil {
 		utils.Fatalln("AddPort:", err)
 	}
 }
@@ -78,6 +79,9 @@ func AddFlow(brName, containerA, ifA, containerB, ifB string) {
 		"in_port="+portA+",actions=output:"+portB,
 	)
 	cmd.Stderr = &stderr
+	if config.VFlag {
+		fmt.Println(cmd.String())
+	}
 	err := cmd.Run()
 	if err != nil {
 		utils.Fatalln("AddFlow:", string(stderr.Bytes()), err)
@@ -88,6 +92,9 @@ func AddFlow(brName, containerA, ifA, containerB, ifB string) {
 		"in_port="+portB+",actions=output:"+portA,
 	)
 	cmd.Stderr = &stderr
+	if config.VFlag {
+		fmt.Println(cmd.String())
+	}
 	err = cmd.Run()
 	if err != nil {
 		utils.Fatalln("AddFlow:", string(stderr.Bytes()), err)

@@ -1,0 +1,23 @@
+name: "isis"
+
+autonomous_systems:
+  - asn: 10
+    routers: 5
+    loopback_start: "10.1.1.1/32"
+    # prefix: "2001:abcd::1/64"
+    prefix: "192.168.1.1/24"
+    igp: "isis"
+    bgp:
+      disabled: false
+    isis:
+      level-1: [1, 4]
+      level-2: [5]
+      level-1-2: [2, 3]
+      areas:
+        1: [1, 2]
+        2: [3, 4]
+        3: [5]
+    links:
+      kind: 'manual'
+      subnet_length: 30
+      file: internal-links

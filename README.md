@@ -11,6 +11,12 @@ Network Topology Automation using FRRouting containers
 Topomate reads a YAML configuration file describing a network topology,
 and generates containers, links and configurations from it.
 
+## Trying Topomate
+
+Topomate is still a WIP project with a CLI that is not that user-friendly.
+If you want to try it, I highly suggest you to setup a VM. You'll find more
+informations on [this page](https://github.com/rahveiz/topomate/wiki/Development-VM).
+
 ### Example configuration file
 
 ```yaml

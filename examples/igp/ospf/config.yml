@@ -1,0 +1,33 @@
+name: "isis"
+
+autonomous_systems:
+  - asn: 10
+    routers: 5
+    loopback_start: "10.1.1.1/32"
+    # prefix: "2001:abcd::1/64"
+    prefix: "192.168.1.1/24"
+    igp: "ospf"
+    bgp:
+      disabled: true
+    ospf:
+      networks:
+        - prefix: 192.168.1.1/24
+          area: 0
+          routers: [2, 3, 5]
+        - prefix: 192.168.1.1/24
+          area: 1
+          routers: [1]
+        - prefix: 192.168.1.1/24
+          area: 2
+          routers: [4]
+        - prefix: "10.67.67.0/24"
+          area: 6
+          routers: [5]
+      stubs: [1, 4]
+
+        
+    links:
+      kind: 'manual'
+      subnet_length: 30
+      file: internal-links
+    
