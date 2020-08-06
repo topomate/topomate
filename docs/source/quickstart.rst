@@ -4,11 +4,11 @@ Quick Start Guide
 Notes
 #####
 
-Topomate does not require to be run as root, but you will need to belong to the
-`sudo` user group (as many commands will be called with sudo internally).
+Topomate does not require to be run as root, but you will need to have sudo
+rights (as many commands will be called with sudo internally).
 
-The choice to call external commands with sudo internally was made to allow the
-user to keep its current environnement.
+You can also use the commands with `sudo`, the application will detect your
+own home directory automatically.
 
 Basic Configuration
 ###################
@@ -18,11 +18,15 @@ We'll define a simple configuration with 2 AS (AS1 and AS2).
 First, we'll describe the specification of AS1. Let's say that AS1 is made of
 4 routers using a full-mesh topology, and that it administrates the
 `10.1.1.1/24` prefix. `/30` networks will be used to interconnect the different
-routers.
+routers. We also specify a name that will be the directory where the
+configuration files will be put (defaults to "generated" if the key is not
+present).
 
 .. code-block:: yaml
   :linenos:
 
+   name: "quickstart_topology"
+   
    autonomous_systems:
     - asn: 1
       routers: 4
@@ -132,5 +136,5 @@ If you only want the FRR configuration files, you can use the `generate` command
    topomate generate /path/to/config/file.yaml
 
 By default, the configurations will be generated in your home directory using
-the following path format: `~/.topogen/conf_<AS_number>_R<router_number>`
-(i.e. `~/.topogen/conf_1_R3`).
+the following path format: `~/topomate/<config_dir>/conf_<ASN>_<hostname>`
+(i.e. `~/quickstart_topology/conf_1_R3`).
