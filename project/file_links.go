@@ -157,7 +157,7 @@ func (p *Project) externalFromFile(path string) {
 				break
 			}
 		}
-		l.setupExternal(&p.AS[fromASN].Network.NextAvailable)
+		l.setupExternal(&p.AS[fromASN].Network)
 		p.Ext = append(p.Ext, l)
 	}
 }

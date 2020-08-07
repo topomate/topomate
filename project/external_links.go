@@ -5,7 +5,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -82,35 +81,12 @@ func (p *Project) parseExternal(k config.ExternalLink) {
 	default:
 		break
 	}
-	l.setupExternal(&p.AS[k.From.ASN].Network.NextAvailable)
+	l.setupExternal(&p.AS[k.From.ASN].Network)
 	p.Ext = append(p.Ext, l)
 }
 
-func (e *ExternalLink) setupExternal(p **net.IPNet) {
-	if p == nil {
-		return
-	}
-	prefix := *p
-	prefixLen, _ := prefix.Mask.Size()
-	addrCnt := cidr.AddressCount(prefix) - 2 // number of hosts available
-	assigned := uint64(0)
-
-	e.From.Interface.IP = net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
-	}
-	prefix.IP = cidr.Inc(prefix.IP)
-	e.To.Interface.IP = net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
-	}
-	assigned += 2
-
-	// check if we need to get next subnet
-	if assigned+2 > addrCnt {
-		prefix, _ = cidr.NextSubnet(prefix, prefixLen)
-	}
-
-	(*p).IP = cidr.Inc(prefix.IP)
-
+func (e *ExternalLink) setupExternal(p *Net) {
+	a, b := p.NextLinkIPs()
+	e.From.Interface.IP = a
+	e.To.Interface.IP = b
 }

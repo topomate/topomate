@@ -25,6 +25,13 @@ type PortSettings struct {
 	OFPort int
 	VRF    string
 	IP     string
+	Routes []IPRoute
+}
+
+type IPRoute struct {
+	IP     string
+	Via    string
+	IfName string
 }
 
 type OVSDockerClient struct {
@@ -279,6 +286,17 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 	if settings.IP != "" {
 		if err := c.ExecNS("ip", "a", "add", "dev", ifName, settings.IP); err != nil {
 			return err
+		}
+	}
+
+	if len(settings.Routes) > 0 {
+		for _, route := range settings.Routes {
+			if err := c.ExecNS(
+				"ip", "route", "add", route.IP,
+				"via", route.Via,
+				"dev", route.IfName); err != nil {
+				return err
+			}
 		}
 	}
 

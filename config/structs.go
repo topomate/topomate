@@ -7,13 +7,13 @@ const (
 )
 
 type BaseConfig struct {
-	Name         string         `yaml:"name,omitempty"`
-	Global       GlobalConfig   `yaml:"global_settings"`
-	AS           []ASConfig     `yaml:"autonomous_systems"`
-	ExternalFile string         `yaml:"external_links_file"`
-	External     []ExternalLink `yaml:"external_links"`
-	IXPs         []IXPConfig    `yaml:"ixps"`
-	RPKI         RPKIConfig
+	Name         string                `yaml:"name,omitempty"`
+	Global       GlobalConfig          `yaml:"global_settings"`
+	AS           []ASConfig            `yaml:"autonomous_systems"`
+	ExternalFile string                `yaml:"external_links_file"`
+	External     []ExternalLink        `yaml:"external_links"`
+	IXPs         []IXPConfig           `yaml:"ixps"`
+	RPKI         map[string]RPKIConfig `yaml:"rpki"`
 }
 
 type GlobalConfig struct {
@@ -43,6 +43,9 @@ type ASConfig struct {
 	Links      InternalLinks `yaml:"links,omitempty"`
 	MPLS       bool          `yaml:"mpls,omitempty"`
 	VPN        []VPNConfig
+	RPKI       struct {
+		Servers []string `yaml:"servers"`
+	} `yaml:"rpki"`
 }
 
 // type IBGPConfig struct {
@@ -125,11 +128,11 @@ type OSPFConfig struct {
 
 type RPKIConfig struct {
 	// ASN        int      `yaml:"asn"`
-	Hostname string
-	Address  string `yaml:"server_address"`
+	Address string `yaml:"server_address"`
 	// NeighborAS []string `yaml:"neighbors_as,flow"`
 	RouterLink struct {
 		ASN      int `yaml:"asn"`
 		RouterID int `yaml:"router_id"`
 	} `yaml:"linked_to"`
+	CacheFile string `yaml:"cache_file"`
 }

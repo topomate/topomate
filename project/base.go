@@ -16,18 +16,24 @@ import (
 	"github.com/rahveiz/topomate/internal/link"
 	"github.com/rahveiz/topomate/internal/ovsdocker"
 	"github.com/rahveiz/topomate/utils"
+	"github.com/spf13/viper"
 
 	"gopkg.in/yaml.v2"
 )
 
 // Project is the main struct of topomate
 type Project struct {
-	Name string
-	AS   map[int]*AutonomousSystem
-	Ext  []*ExternalLink
-	IXPs []IXP
-
+	Name     string
+	AS       map[int]*AutonomousSystem
+	Ext      []*ExternalLink
+	IXPs     []IXP
+	RPKI     map[string]RPKIServer
 	AllLinks ovsdocker.OVSBulk
+}
+
+type RPKIServer struct {
+	IP   string
+	Port int
 }
 
 // ReadConfig reads a yaml file, parses it and returns a Project
@@ -44,6 +50,13 @@ func ReadConfig(path string) *Project {
 	}
 	if err := yaml.Unmarshal(data, conf); err != nil {
 		utils.Fatalln(err)
+	}
+
+	if conf.Name != "" {
+		if conf.Name == "generated" {
+			utils.Fatalln("Name \"generated\" not allowed (used by default).")
+		}
+		viper.Set("ConfigDir", utils.GetHome()+"/topomate/"+conf.Name)
 	}
 
 	config.ConfigDir = filepath.Dir(path)
@@ -228,16 +241,15 @@ func ReadConfig(path string) *Project {
 			}
 		}
 		a.linkVPN()
+
+		/***************************** RPKI Servers ***************************/
+		a.RPKI.Servers = k.RPKI.Servers
 	}
 
 	/************************** External links setup **************************/
 	if conf.External == nil {
 		if conf.ExternalFile != "" {
-			if filepath.IsAbs(conf.ExternalFile) {
-				proj.externalFromFile(conf.ExternalFile)
-			} else {
-				proj.externalFromFile(config.ConfigDir + "/" + conf.ExternalFile)
-			}
+			proj.externalFromFile(utils.ResolveFilePath(conf.ExternalFile))
 		}
 	} else {
 		for _, k := range conf.External {
@@ -591,6 +603,11 @@ func (p *Project) ApplyHostLinks() {
 
 			settings.Speed = v.Host.Interface.Speed
 			settings.IP = v.Host.Interface.IP.String()
+			settings.Routes = []ovsdocker.IPRoute{{
+				IP:     "0.0.0.0/0",
+				Via:    v.Router.Interface.IP.IP.String(),
+				IfName: v.Host.Interface.IfName,
+			}}
 			link.AddPortToContainer(brName, v.Host.Interface.IfName, v.Host.Host.ContainerName, settings, &hostIf, true)
 
 			if _, ok := p.AllLinks[v.Host.Host.ContainerName]; !ok {

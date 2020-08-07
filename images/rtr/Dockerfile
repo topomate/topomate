@@ -10,6 +10,7 @@ FROM alpine:latest as keygen
 
 RUN apk --update --no-cache add openssl
 RUN openssl ecparam -genkey -name prime256v1 -noout -outform pem > private.pem
+RUN openssl req -new -x509 -subj "/C=/ST=/L=/O=/CN=" -key private.pem -out server.pem
 
 FROM alpine:latest
 ARG src_uri

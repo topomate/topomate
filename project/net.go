@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/rahveiz/topomate/utils"
 )
 
 type Net struct {
@@ -67,7 +68,38 @@ func (n Net) Hosts() []net.IP {
 	return n.AllIPs()[1 : n.Size()-1]
 }
 
-// NextIP returns the current NextAvailable IPNet, then increments the IP by one
+// NextSubnet returns the current NextAvailable IPNet, then sets the value to
+// the next subnet
+func (n *Net) NextSubnet(prefixLen int) net.IPNet {
+	res := *n.NextAvailable
+	_n, full := cidr.NextSubnet(n.NextAvailable, prefixLen)
+	if full {
+		utils.Fatalln("NextIP: Subnet full")
+	}
+	n.NextAvailable = _n
+	return res
+}
+
+// NextLinkIPs returns the 2 first host IPs of the NextAvailable IPNet, then
+// sets the value to the next one
+func (n *Net) NextLinkIPs() (a net.IPNet, b net.IPNet) {
+	if n.Is4() {
+		_n := n.NextSubnet(30)
+		_n.IP = cidr.Inc(_n.IP)
+		a = _n
+		_n.IP = cidr.Inc(_n.IP)
+		b = _n
+	} else {
+		_n := n.NextSubnet(126)
+		_n.IP = cidr.Inc(_n.IP)
+		a = _n
+		_n.IP = cidr.Inc(_n.IP)
+		b = _n
+	}
+	return
+}
+
+// NextIP returns the current NextAvailable IPNet, then increments its IP by one
 func (n *Net) NextIP() net.IPNet {
 	res := *n.NextAvailable
 	n.NextAvailable.IP = cidr.Inc(n.NextAvailable.IP)

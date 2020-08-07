@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os/exec"
 	"sync"
 
 	"github.com/docker/docker/api/types"
@@ -18,8 +19,15 @@ type Host struct {
 	Hostname      string
 	ContainerName string
 	DockerImage   string
+	Command       []string
+	Files         []HostFile
 	Links         []*NetInterface
 	NextInterface int
+}
+
+type HostFile struct {
+	HostPath      string
+	ContainerPath string
 }
 
 type HostLinkItem struct {
@@ -70,16 +78,23 @@ func (host *Host) StartContainer(wg *sync.WaitGroup) {
 			CapAdd: []string{"SYS_ADMIN", "NET_ADMIN"},
 		}
 		image := host.DockerImage
-		resp, err := cli.ContainerCreate(ctx, &container.Config{
+		// -ssh.bind :8083
+		contCfg := &container.Config{
 			Image:           image,
 			Hostname:        host.Hostname,
 			NetworkDisabled: true,
-		}, hostCfg, nil, nil, host.ContainerName)
+			Cmd:             host.Command,
+		}
+		resp, err := cli.ContainerCreate(ctx,
+			contCfg, hostCfg, nil, nil, host.ContainerName)
 		utils.Check(err)
 		containerID = resp.ID
 	} else { // container exists
 		containerID = li[0].ID
 	}
+
+	// Copy files
+	host.CopyFiles()
 
 	// Start container
 	if err := cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
@@ -102,5 +117,19 @@ func (host *Host) StopContainer(wg *sync.WaitGroup) {
 
 	if err := cli.ContainerStop(ctx, host.ContainerName, nil); err != nil {
 		panic(err)
+	}
+}
+
+func (host *Host) CopyFiles() {
+	for _, f := range host.Files {
+		out, err := exec.Command(
+			"docker",
+			"cp",
+			f.HostPath,
+			host.ContainerName+":"+f.ContainerPath,
+		).CombinedOutput()
+		if err != nil {
+			utils.Fatalln(string(out), err)
+		}
 	}
 }

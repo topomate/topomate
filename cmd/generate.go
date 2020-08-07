@@ -16,7 +16,7 @@ var generateCmd = &cobra.Command{
 They are located in $HOME/topomate/<name> by default. If no name is specified, it uses "generated".`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
-		setConfigDir(newConf.Name)
+		// setConfigDir(newConf.Name)
 		generateConfigs(newConf)
 	},
 }

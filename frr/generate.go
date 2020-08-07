@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/rahveiz/topomate/config"
@@ -45,6 +44,11 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					IGPConfig: make([]IGPIfConfig, 0, 5),
 				}
 			}
+
+			// RPKI
+			tmp := strings.Builder{}
+			writeRPKI(&tmp, p.RPKI, as.RPKI.Servers)
+			c.RPKIBuffer = tmp.String()
 
 			// BGP
 			c.BGP = BGPConfig{
@@ -643,56 +647,6 @@ func (c *FRRConfig) writeMPLS(dst io.Writer) {
 	sep(dst)
 }
 
-func writeRelationsMaps(dst io.Writer, asn int) {
-
-	// Default route maps
-	provComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Provider.Community)
-	provLP := strconv.Itoa(config.DefaultBGPSettings.Provider.LocalPref)
-	peerComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Peer.Community)
-	peerLP := strconv.Itoa(config.DefaultBGPSettings.Peer.LocalPref)
-	custComm := fmt.Sprintf("%d:%d", asn, config.DefaultBGPSettings.Customer.Community)
-	custLP := strconv.Itoa(config.DefaultBGPSettings.Customer.LocalPref)
-	fmt.Fprintf(dst,
-		`!
-bgp community-list standard PROVIDER permit %[1]s
-bgp community-list standard PEER permit %[3]s
-bgp community-list standard CUSTOMER permit %[5]s
-!
-route-map PEER_OUT deny 10
- match community PROVIDER
- !
-route-map PEER_OUT deny 15
- match community PEER
-!
-route-map PEER_OUT permit 20
-!
-route-map PROVIDER_OUT deny 10
- match community PEER
-!
-route-map PROVIDER_OUT deny 15
- match community PROVIDER
-!
-route-map PROVIDER_OUT permit 20
-!
-route-map CUSTOMER_OUT permit 20
-!
-route-map PEER_IN permit 20
- set community %[3]s
- set local-preference %[4]s
-!
-route-map CUSTOMER_IN permit 10
- set community %[5]s
- set local-preference %[6]s
-!
-route-map PROVIDER_IN permit 10
- set community %[1]s
- set local-preference %[2]s
-!
-`, provComm, provLP, peerComm, peerLP, custComm, custLP)
-
-	sep(dst)
-}
-
 func writePrefixItems(dst io.Writer, prefix string, order int) {
 	sep(dst)
 	fmt.Fprintln(dst, "ip prefix-list OWN_PREFIX permit", prefix, "le 32")
@@ -736,11 +690,14 @@ password topomate
 
 	writeStatic(dst, c.StaticRoutes)
 
+	fmt.Fprintf(dst, c.RPKIBuffer)
+
 	if c.BGP.ASN > 0 && !c.BGP.Disabled {
 		writeBGP(dst, c.BGP)
 		if !c.IXP { // no need for default route-maps in IXP
 			writeRelationsMaps(dst, c.BGP.ASN)
 		}
+		writeRPKIMaps(dst)
 	}
 
 	for _, igp := range c.IGP {

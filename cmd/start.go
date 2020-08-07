@@ -14,7 +14,7 @@ var startCmd = &cobra.Command{
 Automatically creates Docker containers, network links and FRR configuration files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
-		setConfigDir(newConf.Name)
+		// setConfigDir(newConf.Name)
 		if n, err := cmd.Flags().GetBool("no-generate"); err == nil {
 			if !n {
 				generateConfigs(newConf)

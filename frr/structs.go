@@ -26,6 +26,7 @@ type FRRConfig struct {
 	StaticRoutes map[string][]string
 	nextOSPF     int
 	IXP          bool
+	RPKIBuffer   string
 }
 
 type IfConfig struct {

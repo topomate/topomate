@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -158,4 +159,11 @@ func StartFrr(cName string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s %v\n", cName, string(out), err)
 	}
+}
+
+func ResolveFilePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return config.ConfigDir + "/" + path
 }

@@ -60,6 +60,9 @@ type AutonomousSystem struct {
 	OSPF struct {
 		Stubs []int
 	}
+	RPKI struct {
+		Servers []string
+	}
 }
 
 func (a *AutonomousSystem) IsOSPFStub(area int) bool {
@@ -190,7 +193,7 @@ func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
 		}
 	}
 	a.Network.NextAvailable = &net.IPNet{
-		IP:   cidr.Inc(n.IP),
+		IP:   n.IP,
 		Mask: n.Mask,
 	}
 }
