@@ -146,3 +146,7 @@ func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
 		}
 	}
 }
+
+func (pl *PrefixList) WriteMatch(dst io.Writer) {
+	fmt.Fprintln(dst, " match ip address prefix-list", pl.Name)
+}

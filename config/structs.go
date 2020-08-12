@@ -69,11 +69,15 @@ type BGPConfig struct {
 
 type VPNConfig struct {
 	VRF       string `yaml:"vrf"`
+	HubMode   bool   `yaml:"hub_and_spoke"`
 	Customers []struct {
-		Hostname string `yaml:"hostname"`
-		Loopback string `yaml:"loopback"`
-		Subnet   string `yaml:"subnet"`
-		Parent   int    `yaml:"parent"`
+		Hostname     string `yaml:"hostname"`
+		Loopback     string `yaml:"loopback"`
+		RemoteSubnet string `yaml:"remote_subnet"`
+		Subnet       string `yaml:"subnet"`
+		SubnetDown   string `yaml:"downstream_subnet"`
+		Parent       int    `yaml:"parent"`
+		Hub          bool
 	} `yaml:"customers"`
 }
 

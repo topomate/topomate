@@ -27,6 +27,8 @@ type FRRConfig struct {
 	nextOSPF     int
 	IXP          bool
 	RPKIBuffer   string
+	PrefixLists  []PrefixList
+	RouteMaps    []RouteMap
 }
 
 type IfConfig struct {
@@ -110,4 +112,20 @@ type OSPFIfConfig struct {
 	ProcessID int
 	Area      int
 	Cost      int
+}
+
+type PrefixList struct {
+	Name   string
+	Prefix string
+	Deny   bool
+}
+
+type RouteMapMatch interface {
+	WriteMatch(dst io.Writer)
+}
+
+type RouteMap struct {
+	Name  string
+	Match RouteMapMatch
+	Deny  bool
 }

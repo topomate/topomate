@@ -202,6 +202,11 @@ func ReadConfig(path string) *Project {
 			a.VPN[idx].VRF = vpn.VRF
 			a.VPN[idx].Customers = make([]VPNCustomer, len(vpn.Customers))
 			a.VPN[idx].Neighbors = make(map[string]bool, len(vpn.Customers))
+
+			if vpn.HubMode {
+				a.VPN[idx].SpokeSubnets = make([]net.IPNet, 0, len(vpn.Customers))
+			}
+
 			for i, v := range vpn.Customers {
 				_, n, err := net.ParseCIDR(v.Subnet)
 				if err != nil {
@@ -222,6 +227,17 @@ func ReadConfig(path string) *Project {
 				parentRouter := a.Routers[v.Parent-1]
 				a.VPN[idx].Customers[i].Router = router
 				a.VPN[idx].Customers[i].Parent = parentRouter
+				a.VPN[idx].Customers[i].Hub = v.Hub
+
+				// if we use a hub, parse the remote subnet
+				if vpn.HubMode && !v.Hub {
+					_, rmt, err := net.ParseCIDR(v.RemoteSubnet)
+					if err != nil {
+						utils.Fatalln(err)
+					}
+					a.VPN[idx].SpokeSubnets = append(a.VPN[idx].SpokeSubnets, *rmt)
+				}
+
 				a.VPN[idx].Neighbors[parentRouter.LoID()] = true
 				l := Link{
 					First:  NewLinkItem(parentRouter),
@@ -238,6 +254,33 @@ func ReadConfig(path string) *Project {
 				parentRouter.Links = append(parentRouter.Links, l.First.Interface)
 				router.Links[0] = l.Second.Interface
 				a.Links = append(a.Links, l)
+
+				// if it is the hub, we also need to add a downstream link
+				// if v.Hub {
+				// 	_, dn, err := net.ParseCIDR(v.Subnet)
+				// 	if err != nil {
+				// 		utils.Fatalln(err)
+				// 	}
+
+				// 	l := Link{
+				// 		First:  NewLinkItem(parentRouter),
+				// 		Second: NewLinkItem(router),
+				// 	}
+
+				// 	dn.IP = cidr.Inc(n.IP)
+				// 	l.First.Interface.IP = *n
+				// 	l.First.Interface.Description =
+				// 		fmt.Sprintf("linked to customer %s (downstream)", v.Hostname)
+				// 	l.First.Interface.External = true
+				// 	l.First.Interface.VRF = vpn.VRF + "_down"
+
+				// 	n.IP = cidr.Inc(n.IP)
+				// 	l.Second.Interface.IP = *n
+
+				// 	parentRouter.Links = append(parentRouter.Links, l.First.Interface)
+				// 	router.Links = append(router.Links, l.Second.Interface)
+				// 	a.Links = append(a.Links, l)
+				// }
 			}
 		}
 		a.linkVPN()
