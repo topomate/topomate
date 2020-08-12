@@ -58,6 +58,8 @@ func DefaultParams() PortSettings {
 	}
 }
 
+var nextTableID = 100
+
 func (c *OVSDockerClient) pidToStr() string {
 	return strconv.Itoa(c.PID)
 }
@@ -274,12 +276,13 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 
 	// Add a VRF in needed
 	if settings.VRF != "" {
-		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", "100")
+		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", strconv.Itoa(nextTableID))
 		c.ExecNS("ip", "link", "set", settings.VRF, "up")
 
 		if err := c.ExecNS("ip", "link", "set", ifName, "vrf", settings.VRF); err != nil {
 			return err
 		}
+		nextTableID++
 	}
 
 	// Add IP if specified

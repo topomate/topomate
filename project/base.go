@@ -246,31 +246,31 @@ func ReadConfig(path string) *Project {
 				a.Links = append(a.Links, l)
 
 				// if it is the hub, we also need to add a downstream link
-				// if v.Hub {
-				// 	_, dn, err := net.ParseCIDR(v.Subnet)
-				// 	if err != nil {
-				// 		utils.Fatalln(err)
-				// 	}
+				if v.Hub {
+					_, dn, err := net.ParseCIDR(v.Subnet)
+					if err != nil {
+						utils.Fatalln(err)
+					}
 
-				// 	l := Link{
-				// 		First:  NewLinkItem(parentRouter),
-				// 		Second: NewLinkItem(router),
-				// 	}
+					l := Link{
+						First:  NewLinkItem(parentRouter),
+						Second: NewLinkItem(router),
+					}
 
-				// 	dn.IP = cidr.Inc(n.IP)
-				// 	l.First.Interface.IP = *n
-				// 	l.First.Interface.Description =
-				// 		fmt.Sprintf("linked to customer %s (downstream)", v.Hostname)
-				// 	l.First.Interface.External = true
-				// 	l.First.Interface.VRF = vpn.VRF + "_down"
+					dn.IP = cidr.Inc(n.IP)
+					l.First.Interface.IP = *n
+					l.First.Interface.Description =
+						fmt.Sprintf("linked to customer %s (downstream)", v.Hostname)
+					l.First.Interface.External = true
+					l.First.Interface.VRF = vpn.VRF + "_down"
 
-				// 	n.IP = cidr.Inc(n.IP)
-				// 	l.Second.Interface.IP = *n
+					n.IP = cidr.Inc(n.IP)
+					l.Second.Interface.IP = *n
 
-				// 	parentRouter.Links = append(parentRouter.Links, l.First.Interface)
-				// 	router.Links = append(router.Links, l.Second.Interface)
-				// 	a.Links = append(a.Links, l)
-				// }
+					parentRouter.Links = append(parentRouter.Links, l.First.Interface)
+					router.Links = append(router.Links, l.Second.Interface)
+					a.Links = append(a.Links, l)
+				}
 			}
 		}
 		a.linkVPN()

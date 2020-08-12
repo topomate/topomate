@@ -60,4 +60,11 @@ rpki:
     linked_to:
       asn: 2001
       router_id: 1
-    cache_file: rpki.json
+    # cache_file: rpki.json
+    roas:
+      - prefix: "10.1.1.0/22"
+        maxLength: 32
+        asn: 100
+      - prefix: "192.123.2.1/24"
+        maxLength: 32
+        asn: 1992

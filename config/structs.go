@@ -131,6 +131,12 @@ type OSPFConfig struct {
 	// } `yaml:"areas"`
 }
 
+type ROA struct {
+	Prefix    string `yaml:"prefix"`
+	MaxLength int    `yaml:"maxLength"`
+	ASN       int    `yaml:"asn"`
+}
+
 type RPKIConfig struct {
 	// ASN        int      `yaml:"asn"`
 	Address string `yaml:"server_address"`
@@ -140,4 +146,5 @@ type RPKIConfig struct {
 		RouterID int `yaml:"router_id"`
 	} `yaml:"linked_to"`
 	CacheFile string `yaml:"cache_file"`
+	ROAs      []ROA  `yaml:"roas"`
 }
