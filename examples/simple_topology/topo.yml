@@ -1,15 +1,15 @@
-name: "Simple configuration"
+name: "SimpleConfiguration"
 autonomous_systems:
   - asn: 10
     routers: 4
     igp: OSPF
-    prefix: '192.168.8.0/28'
+    prefix: '192.168.8.0/27'
     links:
       kind: 'full-mesh'
   - asn: 20
     routers: 3
     igp: OSPF
-    prefix: '10.1.1.0/29'
+    prefix: '10.1.1.0/28'
     links:
       kind: 'manual'
       specs:
@@ -18,7 +18,7 @@ autonomous_systems:
         - first: 2
           second: 3
         - first: 1
-          second: 4
+          second: 3
   - asn: 33
     routers: 5
     igp: 'OSPF'

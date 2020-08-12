@@ -86,6 +86,9 @@ func (p *Project) parseExternal(k config.ExternalLink) {
 }
 
 func (e *ExternalLink) setupExternal(p *Net) {
+	if !p.AutoAddress {
+		return
+	}
 	a, b := p.NextLinkIPs()
 	e.From.Interface.IP = a
 	e.To.Interface.IP = b

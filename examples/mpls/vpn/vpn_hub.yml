@@ -1,4 +1,4 @@
-name: 'vpnv4'
+name: 'vpn_hub'
 
 autonomous_systems:
     - asn: 69
@@ -9,24 +9,8 @@ autonomous_systems:
       loopback_start: '10.100.1.1/32'
       links:
         kind: 'manual'
-        subnet_length: 30
         file: internal_links
       vpn:
-        # - vrf: 'X'
-        #   # type: 'site-to-site'
-        #   customers:
-        #   - hostname: "C1-X"
-        #     loopback: '192.168.1.1/32'
-        #     subnet: '10.0.1.0/30'
-        #     parent: 1
-        #   - hostname: 'C2-X'
-        #     loopback: '192.168.1.2/32'
-        #     subnet: '10.0.4.0/30'
-        #     parent: 4
-        #   - hostname: 'C3-X'
-        #     loopback: '192.168.1.3/32'
-        #     subnet: '10.0.7.0/30'
-        #     parent: 7
         - vrf: 'Y'
           hub_and_spoke: true
           customers:

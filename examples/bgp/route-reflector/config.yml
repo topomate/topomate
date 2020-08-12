@@ -20,7 +20,6 @@ autonomous_systems:
           - [4,5,6]
     links:
       kind: 'manual'
-      subnet_length: 30
       file: 'internalconf'
   - asn: 421
     routers: 3
@@ -31,7 +30,6 @@ autonomous_systems:
     prefix: '192.168.100.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
 
 external_links:
   - from:

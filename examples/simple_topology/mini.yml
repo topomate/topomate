@@ -6,4 +6,3 @@ autonomous_systems:
     prefix: '192.168.8.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30

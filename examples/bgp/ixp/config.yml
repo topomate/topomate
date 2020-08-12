@@ -9,7 +9,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 102
     routers: 2
     loopback_start: '10.102.1.1/32'
@@ -19,7 +18,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 103
     routers: 2
     loopback_start: '10.103.1.1/32'
@@ -29,7 +27,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 104
     routers: 2
     loopback_start: '10.104.1.1/32'
@@ -39,7 +36,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 105
     routers: 2
     loopback_start: '10.105.1.1/32'
@@ -49,7 +45,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 106
     routers: 2
     loopback_start: '10.106.1.1/32'
@@ -59,7 +54,6 @@ autonomous_systems:
     igp: 'ISIS'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 300
     routers: 2
     loopback_start: '172.16.3.1/32'
@@ -69,7 +63,6 @@ autonomous_systems:
     igp: 'OSPF'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
 
 ixps:
   - asn: 100

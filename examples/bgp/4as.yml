@@ -27,7 +27,6 @@ autonomous_systems:
     mpls: true
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 2
     routers: 2
     loopback_start: '172.16.20.1/32'
@@ -37,7 +36,6 @@ autonomous_systems:
     prefix: '10.1.2.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 3
     routers: 2
     loopback_start: '172.16.30.1/32'
@@ -47,7 +45,6 @@ autonomous_systems:
     prefix: '10.1.3.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
   - asn: 4
     routers: 2
     loopback_start: '172.16.40.1/32'
@@ -57,6 +54,5 @@ autonomous_systems:
     prefix: '10.1.4.0/24'
     links:
       kind: 'full-mesh'
-      subnet_length: 30
 
 external_links_file: '4as-extconf'

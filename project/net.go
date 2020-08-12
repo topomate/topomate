@@ -11,8 +11,10 @@ import (
 )
 
 type Net struct {
-	IPNet         *net.IPNet
-	NextAvailable *net.IPNet
+	IPNet            *net.IPNet
+	NextAvailable    *net.IPNet
+	AvailableSubnets int
+	AutoAddress      bool
 }
 
 func (n Net) MarshalJSON() ([]byte, error) {
@@ -31,6 +33,31 @@ func (n *Net) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	return err
+}
+
+func NewNetwork(prefix string, prefixLen int) Net {
+	_, n, err := net.ParseCIDR(prefix)
+	if err != nil {
+		utils.Fatalln("NewNetwork:", err)
+	}
+	var subLen int
+	cur, max := n.Mask.Size()
+	if prefixLen > 0 {
+		subLen = prefixLen - cur
+	} else {
+		subLen = max - 2 - cur
+		prefixLen = max - 2
+	}
+	s, err := cidr.Subnet(n, subLen, 0)
+	if err != nil {
+		utils.Fatalln("NewNetwork:", err)
+	}
+	return Net{
+		IPNet:            n,
+		NextAvailable:    s,
+		AvailableSubnets: int(math.Pow(2, float64(prefixLen-cur))),
+		AutoAddress:      true,
+	}
 }
 
 // AllIPs returns a slice containing all IPs in a network
@@ -72,25 +99,30 @@ func (n Net) Hosts() []net.IP {
 // the next subnet
 func (n *Net) NextSubnet(prefixLen int) net.IPNet {
 	res := *n.NextAvailable
+	if n.AvailableSubnets < 1 {
+		utils.Fatalf("Network %s: no more subnets of size %d available\n", n.IPNet.String(), prefixLen)
+	}
 	_n, full := cidr.NextSubnet(n.NextAvailable, prefixLen)
 	if full {
-		utils.Fatalln("NextIP: Subnet full")
+		utils.Fatalln("NextIP: Subnet full", n.NextAvailable.String())
 	}
 	n.NextAvailable = _n
+	n.AvailableSubnets--
 	return res
 }
 
 // NextLinkIPs returns the 2 first host IPs of the NextAvailable IPNet, then
 // sets the value to the next one
 func (n *Net) NextLinkIPs() (a net.IPNet, b net.IPNet) {
+	subLen, _ := n.NextAvailable.Mask.Size()
 	if n.Is4() {
-		_n := n.NextSubnet(30)
+		_n := n.NextSubnet(subLen)
 		_n.IP = cidr.Inc(_n.IP)
 		a = _n
 		_n.IP = cidr.Inc(_n.IP)
 		b = _n
 	} else {
-		_n := n.NextSubnet(126)
+		_n := n.NextSubnet(subLen)
 		_n.IP = cidr.Inc(_n.IP)
 		a = _n
 		_n.IP = cidr.Inc(_n.IP)

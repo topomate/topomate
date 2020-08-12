@@ -32,18 +32,19 @@ type BGPRelationConfig struct {
 }
 
 type ASConfig struct {
-	ASN        int           `yaml:"asn,omitempty"`
-	NumRouters int           `yaml:"routers,omitempty"`
-	IGP        string        `yaml:"igp,omitempty"`
-	ISIS       ISISConfig    `yaml:"isis"`
-	OSPF       OSPFConfig    `yaml:"ospf"`
-	Prefix     string        `yaml:"prefix,omitempty"`
-	LoRange    string        `yaml:"loopback_start,omitempty"`
-	BGP        BGPConfig     `yaml:"bgp"`
-	Links      InternalLinks `yaml:"links,omitempty"`
-	MPLS       bool          `yaml:"mpls,omitempty"`
-	VPN        []VPNConfig
-	RPKI       struct {
+	ASN          int           `yaml:"asn,omitempty"`
+	NumRouters   int           `yaml:"routers,omitempty"`
+	IGP          string        `yaml:"igp,omitempty"`
+	ISIS         ISISConfig    `yaml:"isis"`
+	OSPF         OSPFConfig    `yaml:"ospf"`
+	Prefix       string        `yaml:"prefix,omitempty"`
+	SubnetLength int           `yaml:"subnet_length"`
+	LoRange      string        `yaml:"loopback_start,omitempty"`
+	BGP          BGPConfig     `yaml:"bgp"`
+	Links        InternalLinks `yaml:"links,omitempty"`
+	MPLS         bool          `yaml:"mpls,omitempty"`
+	VPN          []VPNConfig
+	RPKI         struct {
 		Servers []string `yaml:"servers"`
 	} `yaml:"rpki"`
 }

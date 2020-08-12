@@ -8,7 +8,6 @@ autonomous_systems:
     prefix: "10.1.1.0/22"
     links:
       kind: "full-mesh"
-      subnet_length: 30
   
   # should be blocked
   - asn: 1002
@@ -17,7 +16,6 @@ autonomous_systems:
     prefix: "10.1.1.0/22"
     links:
       kind: "full-mesh"
-      subnet_length: 30
 
   - asn: 1003
     routers: 1

@@ -19,5 +19,4 @@ autonomous_systems:
         3: [5]
     links:
       kind: 'manual'
-      subnet_length: 30
       file: internal-links

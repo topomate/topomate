@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apparentlymart/go-cidr/cidr"
-
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -168,39 +166,14 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 }
 
 // ReserveSubnets generates IPv4 addressing for internal links in an AS
-func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
-	if prefixLen == 0 { // do not set subnets
+func (a *AutonomousSystem) ReserveSubnets() {
+	if !a.Network.AutoAddress { // do not set subnets
 		return
 	}
-	m, ok := a.Network.CheckPrefix(prefixLen)
-	if !ok {
-		utils.Fatalln("Prefix length invalid:", prefixLen)
-	}
-
-	n, _ := cidr.Subnet(a.Network.IPNet, prefixLen-m, 0)
-	addrCnt := cidr.AddressCount(n) - 2 // number of hosts available
-	assigned := uint64(0)
-	// ip := n.IP
-
 	for _, v := range a.Links {
-		// ip = cidr.Inc(ip)
-		n.IP = cidr.Inc(n.IP)
-		v.First.Interface.IP = *n
-		// ip = cidr.Inc(ip)
-		n.IP = cidr.Inc(n.IP)
-		v.Second.Interface.IP = *n
-		assigned += 2
-
-		// check if we need to get next subnet
-		if assigned+2 > addrCnt {
-			n, _ = cidr.NextSubnet(n, prefixLen)
-			assigned = 0
-			// ip = n.IP
-		}
-	}
-	a.Network.NextAvailable = &net.IPNet{
-		IP:   n.IP,
-		Mask: n.Mask,
+		a, b := a.Network.NextLinkIPs()
+		v.First.Interface.IP = a
+		v.Second.Interface.IP = b
 	}
 }
 

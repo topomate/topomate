@@ -102,20 +102,10 @@ func ReadConfig(path string) *Project {
 
 		// Parse network prefix
 		if k.Prefix != "" {
-			_, n, err := net.ParseCIDR(k.Prefix)
-			if err != nil {
-				utils.Fatalln(err)
+			a.Network = NewNetwork(k.Prefix, k.SubnetLength)
+			if k.SubnetLength < 0 {
+				a.Network.AutoAddress = false
 			}
-			cur, max := n.Mask.Size()
-			s, _ := cidr.Subnet(n, max-2-cur, 0)
-			if err != nil {
-				utils.Fatalln(err)
-			}
-			a.Network = Net{
-				IPNet:         n,
-				NextAvailable: s,
-			}
-
 		}
 
 		var loNet *net.IPNet
@@ -188,7 +178,7 @@ func ReadConfig(path string) *Project {
 		// Setup links
 		a.SetupLinks(k.Links)
 
-		a.ReserveSubnets(k.Links.SubnetLength)
+		a.ReserveSubnets()
 		if !k.BGP.IBGP.Manual {
 			a.linkRouters(true)
 		} else {
