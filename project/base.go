@@ -257,15 +257,15 @@ func ReadConfig(path string) *Project {
 						Second: NewLinkItem(router),
 					}
 
-					dn.IP = cidr.Inc(n.IP)
-					l.First.Interface.IP = *n
+					dn.IP = cidr.Inc(dn.IP)
+					l.First.Interface.IP = *dn
 					l.First.Interface.Description =
 						fmt.Sprintf("linked to customer %s (downstream)", v.Hostname)
 					l.First.Interface.External = true
 					l.First.Interface.VRF = vpn.VRF + "_down"
 
-					n.IP = cidr.Inc(n.IP)
-					l.Second.Interface.IP = *n
+					dn.IP = cidr.Inc(dn.IP)
+					l.Second.Interface.IP = *dn
 
 					parentRouter.Links = append(parentRouter.Links, l.First.Interface)
 					router.Links = append(router.Links, l.Second.Interface)
