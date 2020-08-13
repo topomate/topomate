@@ -62,6 +62,10 @@ func (l *NetInterface) SetSpeedAndCost(v int) {
 	l.Cost = v
 }
 
+func (l *NetInterface) IsDownstreamVRF() bool {
+	return strings.HasSuffix(l.VRF, "_down")
+}
+
 // SetupManual generates an internal links configuration based on the provided
 // informations
 func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {

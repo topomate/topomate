@@ -247,7 +247,7 @@ func ReadConfig(path string) *Project {
 
 				// if it is the hub, we also need to add a downstream link
 				if v.Hub {
-					_, dn, err := net.ParseCIDR(v.Subnet)
+					_, dn, err := net.ParseCIDR(v.SubnetDown)
 					if err != nil {
 						utils.Fatalln(err)
 					}

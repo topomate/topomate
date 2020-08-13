@@ -240,14 +240,13 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 
 				// if we use hub-and-spoke VPN, some modifications are made on the hub
 				if vpn.IsHubAndSpoke() && r.Hub {
-					// invert the route-targets for the hub
+					// invert the route-targets for the hub (only need to export)
 					parentRt = RouteTarget{
-						In:  rtOut,
 						Out: rtIn,
 					}
 
-					// first link is the interface linked to the PE
-					iface := r.Router.Links[0]
+					// second link is the interface linked to the PE with downstream vrf
+					iface := r.Router.Links[1]
 					// add a static route to the remote subnets to be announced
 					for _, subnet := range vpn.SpokeSubnets {
 						c.StaticRoutes[iface.IfName] =
@@ -262,6 +261,16 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						RT: parentRt,
 						Redistribute: RouteRedistribution{
 							OSPF: true,
+						},
+					}
+				}
+
+				// on the hub PE, we also add config for the downstream vrf
+				if vpn.IsHubAndSpoke() {
+					parentCfg.BGP.VRF[vpn.VRF+"_down"] = VRFConfig{
+						RD: nextRouteDescriptor,
+						RT: RouteTarget{
+							In: rtOut,
 						},
 					}
 				}
@@ -326,13 +335,13 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					}
 					switch igp {
 					case "OSPF":
-						ifCfg.IGPConfig =
-							append(ifCfg.IGPConfig, OSPFIfConfig{
-								V6:        !is4,
-								Cost:      iface.Cost,
-								ProcessID: 0,
-								Area:      0,
-							})
+
+						ifIGP := OSPFIfConfig{
+							V6:        !is4,
+							Cost:      iface.Cost,
+							ProcessID: 0,
+							Area:      0,
+						}
 						if parentIf := as.GetMatchingLink(nil, iface); parentIf != nil {
 							pIfCfg := IfConfig{
 								IPs:         []net.IPNet{parentIf.IP},
@@ -342,12 +351,15 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 								External:    true,
 								VRF:         parentIf.VRF,
 							}
-							pIfCfg.IGPConfig = append(pIfCfg.IGPConfig, OSPFIfConfig{
-								V6:        !is4,
-								Cost:      parentIf.Cost,
-								ProcessID: 0,
-								Area:      0,
-							})
+							if !parentIf.IsDownstreamVRF() {
+								ifCfg.IGPConfig = append(ifCfg.IGPConfig, ifIGP)
+								pIfCfg.IGPConfig = append(pIfCfg.IGPConfig, OSPFIfConfig{
+									V6:        !is4,
+									Cost:      parentIf.Cost,
+									ProcessID: 0,
+									Area:      0,
+								})
+							}
 
 							parentCfg.Interfaces[parentIf.IfName] = pIfCfg
 						}
@@ -552,10 +564,16 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 		fmt.Fprintln(dst, " address-family ipv4 unicast")
 		fmt.Fprintf(dst, "  rd vpn export %d:%d\n", c.ASN, cfg.RD)
 		fmt.Fprintln(dst, "  label vpn export auto")
-		fmt.Fprintf(dst, "  rt vpn import %d:%d\n", c.ASN, cfg.RT.In)
-		fmt.Fprintf(dst, "  rt vpn export %d:%d\n", c.ASN, cfg.RT.Out)
+		if cfg.RT.In > 0 {
+			fmt.Fprintf(dst, "  rt vpn import %d:%d\n", c.ASN, cfg.RT.In)
+			fmt.Fprintln(dst, "  import vpn")
+		}
+		if cfg.RT.Out > 0 {
+			fmt.Fprintf(dst, "  rt vpn export %d:%d\n", c.ASN, cfg.RT.Out)
+			fmt.Fprintln(dst, "  export vpn")
+		}
 		cfg.Redistribute.Write(dst, 2)
-		fmt.Fprintln(dst, "  import vpn\n  export vpn")
+		// fmt.Fprintln(dst, "  import vpn\n  export vpn")
 		fmt.Fprintln(dst, " exit-address-family")
 		sep(dst)
 	}
