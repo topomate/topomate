@@ -138,12 +138,15 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 					IGPConfig:   make([]IGPIfConfig, 0, 5),
 				}
 				if !iface.External {
+					ip4, ip6 := ifCfg.GetIPType()
+
 					switch igp {
 					case "OSPF":
 						if r.IGP.OSPF == nil {
 							ifCfg.IGPConfig =
 								append(ifCfg.IGPConfig, OSPFIfConfig{
-									V6:        !is4,
+									V4:        ip4,
+									V6:        ip6,
 									Cost:      iface.Cost,
 									ProcessID: 0,
 									Area:      0,
@@ -155,8 +158,6 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						if circuit == 0 {
 							circuit = 2
 						}
-
-						ip4, ip6 := ifCfg.GetIPType()
 
 						ifCfg.IGPConfig =
 							append(ifCfg.IGPConfig, ISISIfConfig{
@@ -177,18 +178,19 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 			// Also add IGP config for loopback interface
 			if nbLo > 0 {
 				ifCfg := c.Interfaces["lo"]
+				ip4, ip6 := ifCfg.GetIPType()
 				switch igp {
 				case "OSPF":
 					if r.IGP.OSPF == nil {
 						ifCfg.IGPConfig =
 							append(ifCfg.IGPConfig, OSPFIfConfig{
-								V6:        !is4,
+								V4:        ip4,
+								V6:        ip6,
 								ProcessID: 0,
 								Area:      0,
 							})
 					}
 				case "ISIS", "IS-IS":
-					ip4, ip6 := ifCfg.GetIPType()
 					ifCfg.IGPConfig =
 						append(ifCfg.IGPConfig, ISISIfConfig{
 							V4:          ip4,
@@ -290,8 +292,7 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 
 	// Here we create temp builders for address-family sections so we don't have
 	// to iterate multiple times over the map of neighbors
-	af4 := strings.Builder{}
-	vpn4 := strings.Builder{}
+	var af4, vpn4, af6, vpn6 strings.Builder
 
 	fmt.Fprintln(dst, "router bgp", c.ASN)
 	if c.RouterID != "" {
@@ -330,6 +331,30 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 			}
 		}
 
+		// address-family ipv6 unicast
+		if v.AF.IPv6 {
+			fmt.Fprintln(&af6, "  neighbor", ip, "activate")
+			if v.NextHopSelf {
+				fmt.Fprintln(&af6, "  neighbor", ip, "next-hop-self")
+			}
+			if v.RouteMapsIn != nil {
+				for _, m := range v.RouteMapsIn {
+					fmt.Fprintln(&af6, "  neighbor", ip, "route-map", m, "in")
+				}
+			}
+			if v.RouteMapsOut != nil {
+				for _, m := range v.RouteMapsOut {
+					fmt.Fprintln(&af6, "  neighbor", ip, "route-map", m, "out")
+				}
+			}
+			if v.RRClient {
+				fmt.Fprintln(&af6, "  neighbor", ip, "route-reflector-client")
+			}
+			if v.RSClient {
+				fmt.Fprintln(&af6, "  neighbor", ip, "route-server-client")
+			}
+		}
+
 		// address-family ipv4 vpn
 		if v.AF.VPNv4 {
 			fmt.Fprintln(&vpn4, "  neighbor", ip, "activate")
@@ -343,19 +368,37 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 	fmt.Fprintln(dst, " !")
 
 	// address-family
-	fmt.Fprintln(dst, " address-family ipv4 unicast")
-	c.Redistribute.Write(dst, 2)
-	for _, network := range c.Networks {
-		fmt.Fprintln(dst, "  network", network)
+	if af4.Len() > 0 {
+		fmt.Fprintln(dst, " address-family ipv4 unicast")
+		c.Redistribute.Write(dst, 2)
+		for _, network := range c.Networks {
+			fmt.Fprintln(dst, "  network", network)
+		}
+		fmt.Fprint(dst, af4.String())
+		fmt.Fprintln(dst, " exit-address-family")
+		fmt.Fprintln(dst, " !")
 	}
-	fmt.Fprint(dst, af4.String())
-	fmt.Fprintln(dst, " exit-address-family")
 
-	fmt.Fprintln(dst, " !")
+	if af6.Len() > 0 {
+		fmt.Fprintln(dst, " address-family ipv6 unicast")
+		c.Redistribute.Write(dst, 2)
+		for _, network := range c.Networks6 {
+			fmt.Fprintln(dst, "  network", network)
+		}
+		fmt.Fprint(dst, af6.String())
+		fmt.Fprintln(dst, " exit-address-family")
+		fmt.Fprintln(dst, " !")
+	}
 
 	if vpn4.Len() > 0 {
 		fmt.Fprintln(dst, " address-family ipv4 vpn")
 		fmt.Fprint(dst, vpn4.String())
+		fmt.Fprintln(dst, " exit-address-family")
+	}
+
+	if vpn6.Len() > 0 {
+		fmt.Fprintln(dst, " address-family ipv6 vpn")
+		fmt.Fprint(dst, vpn6.String())
 		fmt.Fprintln(dst, " exit-address-family")
 	}
 
@@ -421,7 +464,7 @@ func writeOSPF6(dst io.Writer, c OSPF6Config, ifs map[string]IfConfig) {
 			switch e.(type) {
 			case OSPFIfConfig:
 				if e.(OSPFIfConfig).V6 {
-					fmt.Fprintln(dst, " interface", n, "area 0")
+					fmt.Fprintln(dst, " interface", n, "area 0.0.0.0")
 				}
 				break
 			default:
@@ -479,9 +522,13 @@ func (c *FRRConfig) writeMPLS(dst io.Writer) {
 	sep(dst)
 }
 
-func writePrefixItems(dst io.Writer, prefix string, order int) {
+func writePrefixItems(dst io.Writer, prefix string, order int, is6 bool) {
 	sep(dst)
-	fmt.Fprintln(dst, "ip prefix-list OWN_PREFIX permit", prefix, "le 32")
+	if !is6 {
+		fmt.Fprintln(dst, "ip prefix-list OWN_PREFIX permit", prefix, "le 32")
+	} else {
+		fmt.Fprintln(dst, "ip prefix-list OWN_PREFIX permit", prefix, "le 128")
+	}
 	fmt.Fprintln(dst, "route-map OWN_PREFIX permit", order)
 	fmt.Fprintln(dst, " match ip address prefix-list OWN_PREFIX")
 	sep(dst)
@@ -548,8 +595,16 @@ password topomate
 		}
 	}
 
-	for n, p := range c.BGP.Networks {
-		writePrefixItems(dst, p, n+1)
+	n := 1
+
+	for _, p := range c.BGP.Networks {
+		writePrefixItems(dst, p, n, false)
+		n++
+	}
+
+	for _, p := range c.BGP.Networks6 {
+		writePrefixItems(dst, p, n, true)
+		n++
 	}
 
 	if c.MPLS {
@@ -584,9 +639,6 @@ func getOSPFConfig(routerID string, process int) OSPFConfig {
 
 func getOSPF6Config(routerID string) OSPF6Config {
 	cfg := OSPF6Config{
-		Redistribute: RouteRedistribution{
-			Connected: true,
-		},
 		RouterID: routerID,
 	}
 	return cfg

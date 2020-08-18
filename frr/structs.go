@@ -93,6 +93,7 @@ type IGPIfConfig interface {
 }
 
 type OSPFIfConfig struct {
+	V4        bool
 	V6        bool
 	ProcessID int
 	Area      int

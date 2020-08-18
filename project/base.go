@@ -677,6 +677,18 @@ func (p *Project) linkExternal() {
 			toID = lnk.To.Router.Loopback[0].IP.String()
 		}
 
+		af := AddressFamily{}
+		if lnk.From.Interface.IP.IP.To4() != nil {
+			af.IPv4 = true
+		} else {
+			af.IPv6 = true
+		}
+		if !p.AS[lnk.To.ASN].Network.Is4() || !p.AS[lnk.From.ASN].Network.Is4() {
+			af.IPv6 = true
+		} else {
+			af.IPv4 = true
+		}
+
 		// Add description
 		lnk.From.Interface.Description = fmt.Sprintf("linked to AS%d (%s)", lnk.To.ASN, lnk.To.Router.Hostname)
 
@@ -694,7 +706,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.From.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
-			AF:           AddressFamily{IPv4: true},
+			AF:           af,
 		}
 
 		// Do the same thing for the second part of the link
@@ -711,7 +723,7 @@ func (p *Project) linkExternal() {
 			IfName:       lnk.To.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
-			AF:           AddressFamily{IPv4: true},
+			AF:           af,
 		}
 	}
 }

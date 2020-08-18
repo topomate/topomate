@@ -71,6 +71,24 @@ func (r *Router) LoID() string {
 	return r.Loopback[0].IP.String()
 }
 
+func (r *Router) NeighborsAF() (af AddressFamily) {
+	for _, nbr := range r.Neighbors {
+		if !af.IPv4 && nbr.AF.IPv4 {
+			af.IPv4 = true
+		}
+		if !af.IPv6 && nbr.AF.IPv6 {
+			af.IPv6 = true
+		}
+		// if !af.VPNv4 && nbr.AF.VPNv4 {
+		// 	af.VPNv4 = true
+		// }
+		// if !af.VPNv6 && nbr.AF.VPNv6 {
+		// 	af.VPNv6 = true
+		// }
+	}
+	return
+}
+
 // StartContainer starts the container for the router. If configPath is set,
 // it also copies the configuration file from the configured directory to
 // the container

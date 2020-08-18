@@ -1,0 +1,57 @@
+name: 'bgpv6'
+
+# Simple topology with 4 AS : AS1 <- AS2, AS2 <-> AS3, AS2 <- AS4
+# AS1
+# |
+# | 
+# AS2 -- AS3
+# |
+# |
+# AS4
+global_settings:
+  bgp:
+    provider:
+      community: 50
+      local_pref: 86
+    peer:
+      local_pref: 210
+
+autonomous_systems:
+  - asn: 1
+    routers: 2
+    loopback_start: '172.16.10.1/32'
+    igp: OSPF
+    bgp:
+      redistribute_igp: true
+    prefix: '2001:b11b::/64'
+    links:
+      kind: 'full-mesh'
+  - asn: 2
+    routers: 2
+    loopback_start: '172.16.20.1/32'
+    igp: OSPF
+    bgp:
+      redistribute_igp: true
+    prefix: '2001:b22b::/64'
+    links:
+      kind: 'full-mesh'
+  - asn: 3
+    routers: 2
+    loopback_start: '172.16.30.1/32'
+    igp: OSPF
+    bgp:
+      redistribute_igp: true
+    prefix: '2001:b33b::/64'
+    links:
+      kind: 'full-mesh'
+  - asn: 4
+    routers: 2
+    loopback_start: '172.16.40.1/32'
+    igp: OSPF
+    bgp:
+      redistribute_igp: true
+    prefix: '2001:b44b::/64'
+    links:
+      kind: 'full-mesh'
+
+external_links_file: '4as-extconf'

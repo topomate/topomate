@@ -109,7 +109,9 @@ func (ixp *IXP) linkIXP() {
 		if i == 0 {
 			continue
 		}
-		// routerID := lnk.Router.LoID()
+
+		// check which AF are in use
+		af := lnk.Router.NeighborsAF()
 
 		// Peer
 		lnk.Router.Links = append(lnk.Router.Links, lnk.Interface)
@@ -117,7 +119,7 @@ func (ixp *IXP) linkIXP() {
 			RemoteAS: ixp.ASN,
 			// UpdateSource: "lo",
 			NextHopSelf:  true,
-			AF:           AddressFamily{IPv4: true},
+			AF:           af,
 			IfName:       lnk.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
@@ -128,7 +130,7 @@ func (ixp *IXP) linkIXP() {
 			RemoteAS: lnk.ASN,
 			// UpdateSource: "lo",
 			IfName:   ixp.Links[0].Interface.IfName,
-			AF:       AddressFamily{IPv4: true},
+			AF:       af,
 			RSClient: true,
 		}
 	}

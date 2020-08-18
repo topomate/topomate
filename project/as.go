@@ -178,6 +178,10 @@ func (a *AutonomousSystem) ReserveSubnets() {
 }
 
 func (a *AutonomousSystem) linkRouters(ibgp bool) {
+	af := AddressFamily{IPv4: true}
+	if !a.Network.Is4() {
+		af = AddressFamily{IPv6: true}
+	}
 	for _, lnk := range a.Links {
 		first := lnk.First
 		second := lnk.Second
@@ -234,14 +238,14 @@ func (a *AutonomousSystem) linkRouters(ibgp bool) {
 				UpdateSource: "lo",
 				ConnCheck:    false,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 			second.Router.Neighbors[firstID] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
 				ConnCheck:    false,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 		}
 	}
@@ -303,21 +307,10 @@ func (a *AutonomousSystem) linkVPN() {
 }
 
 func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
-	// ibgpConfig := {}
-	// var path string
-	// if filepath.IsAbs(cfg.File) {
-	// 	path = cfg.File
-	// } else {
-	// 	path = config.ConfigDir + "/" + cfg.File
-	// }
-	// data, err := ioutil.ReadFile(path)
-	// if err != nil {
-	// 	utils.Fatalln(err)
-	// }
-	// if err := yaml.Unmarshal(data, &ibgpConfig); err != nil {
-	// 	utils.Fatalln(err)
-	// }
-
+	af := AddressFamily{IPv4: true}
+	if !a.Network.Is4() {
+		af = AddressFamily{IPv6: true}
+	}
 	// Setup route reflectors and clients
 	for _, r := range ibgpConfig.RR {
 		routeReflector := a.getRouter(r.Router)
@@ -328,12 +321,12 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 				UpdateSource: "lo",
 				RRClient:     true,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 			client.Neighbors[routeReflector.LoID()] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 		}
 	}
@@ -353,19 +346,11 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 					RemoteAS:     a.ASN,
 					UpdateSource: "lo",
 					NextHopSelf:  true,
-					AF:           AddressFamily{IPv4: true},
+					AF:           af,
 				}
 			}
 		}
 	}
-
-	// &BGPNbr{
-	// 	RemoteAS:     a.ASN,
-	// 	UpdateSource: "lo",
-	// 	ConnCheck:    false,
-	// 	NextHopSelf:  true,
-	// 	AF:           AddressFamily{IPv4: true},
-	// }
 
 }
 
