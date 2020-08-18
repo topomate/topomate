@@ -29,6 +29,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				Interfaces:   make(map[string]IfConfig, n),
 				StaticRoutes: make(staticRoutes, len(r.Links)),
 				MPLS:         as.MPLS,
+				ipv6:         !is4,
 			}
 
 			// Loopback interface
@@ -154,9 +155,13 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 						if circuit == 0 {
 							circuit = 2
 						}
+
+						ip4, ip6 := ifCfg.GetIPType()
+
 						ifCfg.IGPConfig =
 							append(ifCfg.IGPConfig, ISISIfConfig{
-								V6:          !is4,
+								V4:          ip4,
+								V6:          ip6,
 								ProcessName: isisDefaultProcess,
 								Cost:        iface.Cost,
 								Passive:     iface.IGP.ISIS.Passive,
@@ -183,9 +188,11 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 							})
 					}
 				case "ISIS", "IS-IS":
+					ip4, ip6 := ifCfg.GetIPType()
 					ifCfg.IGPConfig =
 						append(ifCfg.IGPConfig, ISISIfConfig{
-							V6:          !is4,
+							V4:          ip4,
+							V6:          ip6,
 							ProcessName: isisDefaultProcess,
 							Passive:     true,
 						})
@@ -376,26 +383,6 @@ func writeBGP(dst io.Writer, c BGPConfig) {
 	sep(dst)
 }
 
-func writeISIS(dst io.Writer, c ISISConfig) {
-	sep(dst)
-
-	fmt.Fprintln(dst, "router isis", c.ProcessName)
-	fmt.Fprintln(dst, " net", c.ISO)
-	fmt.Fprintln(dst, " metric-style wide")
-	fmt.Fprintln(dst, " is-type", isisTypeString(c.Type))
-
-	// If L1L2, we distribute a default route to the L1 neighbors
-	if c.Type == 3 {
-		fmt.Fprintln(dst, " set-attached-bit")
-		fmt.Fprintln(dst, " default-information originate ipv4 level-1 always")
-	}
-
-	// Here we write the redistribution manually as ISIS syntax is not standard
-	c.writeRedistribute(dst, true, false)
-
-	sep(dst)
-}
-
 func writeOSPF(dst io.Writer, c OSPFConfig) {
 	sep(dst)
 
@@ -554,7 +541,7 @@ password topomate
 			writeOSPF6(dst, igp.(OSPF6Config), c.internalIfs())
 			break
 		case ISISConfig:
-			writeISIS(dst, igp.(ISISConfig))
+			igp.(ISISConfig).writeISIS(dst, !c.ipv6, c.ipv6)
 			break
 		default:
 			break

@@ -73,21 +73,18 @@ func isisTypeString(t int) string {
 	return ctype
 }
 
-func (c ISISIfConfig) Write(dst io.Writer) {
-	ipver := " ip"
-	if c.V6 {
-		ipver = " ipv6"
+func (c *IfConfig) GetIPType() (has4, has6 bool) {
+	for _, ip := range c.IPs {
+		if ip.IP.To4() != nil {
+			has4 = true
+		} else {
+			has6 = true
+		}
+		if has4 && has6 {
+			return
+		}
 	}
-	fmt.Fprintln(dst, ipver, "router isis", c.ProcessName)
-
-	if !c.Passive {
-		fmt.Fprintln(dst, " isis circuit-type", isisTypeString(c.CircuitType))
-	} else {
-		fmt.Fprintln(dst, " isis passive")
-	}
-	if c.Cost > 0 {
-		fmt.Fprintln(dst, " isis metric", c.Cost)
-	}
+	return
 }
 
 func (c OSPFIfConfig) Write(dst io.Writer) {
@@ -98,52 +95,6 @@ func (c OSPFIfConfig) Write(dst io.Writer) {
 	}
 	if c.Cost > 0 {
 		fmt.Fprintln(dst, " bandwidth", c.Cost)
-	}
-}
-
-func (c ISISConfig) writeRedistribution(w io.Writer, af string, level string) {
-	if c.Redistribute.Connected {
-		fmt.Fprintln(w, " redistribute", af, "connected", level)
-	}
-	if c.Redistribute.Static {
-		fmt.Fprintln(w, " redistribute", af, "static", level)
-	}
-	if c.Redistribute.OSPF {
-		fmt.Fprintln(w, " redistribute", af, "ospf", level)
-	}
-	if c.Redistribute.BGP {
-		fmt.Fprintln(w, " redistribute", af, "bgp", level)
-	}
-}
-
-func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
-	if v4 {
-		switch c.Type {
-		case 1:
-			c.writeRedistribution(dst, "ipv4", "level-1")
-			break
-		case 2:
-			c.writeRedistribution(dst, "ipv4", "level-2")
-			break
-		default:
-			c.writeRedistribution(dst, "ipv4", "level-1")
-			c.writeRedistribution(dst, "ipv4", "level-2")
-		}
-	}
-	if v6 {
-		if v4 {
-			switch c.Type {
-			case 1:
-				c.writeRedistribution(dst, "ipv6", "level-1")
-				break
-			case 2:
-				c.writeRedistribution(dst, "ipv6", "level-2")
-				break
-			default:
-				c.writeRedistribution(dst, "ipv6", "level-1")
-				c.writeRedistribution(dst, "ipv6", "level-2")
-			}
-		}
 	}
 }
 

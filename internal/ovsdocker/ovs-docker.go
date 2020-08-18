@@ -254,11 +254,18 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
-	// Activate container side and enable MPLS
+	// Activate container side
 	if err := c.ExecNS("ip", "link", "set", ifName, "up"); err != nil {
 		return err
 	}
 
+	// Enable IPV6
+
+	if err := c.ExecNS("sysctl", "-w", "net.ipv6.conf.all.forwarding=1"); err != nil {
+		return err
+	}
+
+	// Enable MPLS
 	if err := c.ExecNS("sysctl", "-w", "net.mpls.conf."+ifName+".input=1"); err != nil {
 		return err
 	}
@@ -267,6 +274,7 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
+	// Enable BGP VPN support
 	if err := c.ExecNS("sysctl", "-w", "net.ipv4.tcp_l3mdev_accept=1"); err != nil {
 		return err
 	}
@@ -335,6 +343,14 @@ func (c *OVSDockerClient) ExecNS(args ...string) error {
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("ExecNS: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
+	}
+	return nil
+}
+
+// SysctlSet executes a syswtl write inside the container network namespace
+func (c *OVSDockerClient) SysctlSet(key, val string) error {
+	if err := c.ExecNS("sysctl", "-w", key+"="+val); err != nil {
+		return err
 	}
 	return nil
 }

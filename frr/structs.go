@@ -29,6 +29,7 @@ type FRRConfig struct {
 	RPKIBuffer   string
 	PrefixLists  []PrefixList
 	RouteMaps    []RouteMap
+	ipv6         bool
 }
 
 type IfConfig struct {
@@ -64,14 +65,6 @@ type RouteTarget struct {
 	Out int
 }
 
-type ISISConfig struct {
-	ProcessName  string
-	ISO          string
-	Type         int
-	Redistribute RouteRedistribution
-	VRF          string
-}
-
 type OSPFConfig struct {
 	ProcessID    int
 	VRF          string
@@ -97,14 +90,6 @@ type RouteRedistribution struct {
 
 type IGPIfConfig interface {
 	Write(dst io.Writer)
-}
-
-type ISISIfConfig struct {
-	V6          bool
-	ProcessName string
-	CircuitType int
-	Cost        int
-	Passive     bool
 }
 
 type OSPFIfConfig struct {
