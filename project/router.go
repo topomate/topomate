@@ -36,6 +36,7 @@ type BGPNbr struct {
 	AF           AddressFamily
 	RRClient     bool
 	RSClient     bool
+	Mask         int
 }
 
 type OSPFNet struct {
@@ -69,6 +70,14 @@ func (r *Router) LoID() string {
 		return ""
 	}
 	return r.Loopback[0].IP.String()
+}
+
+func (r *Router) LoInfo() (string, int) {
+	if len(r.Loopback) == 0 {
+		return "", 0
+	}
+	m, _ := r.Loopback[0].Mask.Size()
+	return r.Loopback[0].IP.String(), m
 }
 
 func (r *Router) NeighborsAF() (af AddressFamily) {

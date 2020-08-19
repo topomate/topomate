@@ -93,3 +93,40 @@ func (e *ExternalLink) setupExternal(p *Net) {
 	e.From.Interface.IP = a
 	e.To.Interface.IP = b
 }
+
+func (p *Project) GetMatchingExtLink(first, second *NetInterface) *NetInterface {
+	if first != nil && second != nil {
+		return nil
+	}
+	if first != nil {
+		for _, v := range p.Ext {
+			if v.From.Interface == first {
+				return v.To.Interface
+			}
+		}
+	} else {
+		for _, v := range p.Ext {
+			if v.To.Interface == second {
+				return v.From.Interface
+			}
+		}
+	}
+	return nil
+}
+
+func (p *Project) FindMatchingExtLink(iface *NetInterface) *NetInterface {
+	if iface == nil {
+		return nil
+	}
+
+	for _, lnk := range p.Ext {
+		if lnk.From.Interface == iface {
+			return lnk.To.Interface
+		}
+		if lnk.To.Interface == iface {
+			return lnk.From.Interface
+		}
+	}
+
+	return nil
+}

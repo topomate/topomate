@@ -28,7 +28,7 @@ func generateVPNConfig(as *project.AutonomousSystem, ASconfigs []*FRRConfig) []*
 			c := &FRRConfig{
 				Hostname:     r.Router.Hostname,
 				Interfaces:   make(map[string]IfConfig, 4),
-				StaticRoutes: make(staticRoutes, len(r.Router.Links)),
+				StaticRoutes: initStatic(len(r.Router.Links)),
 			}
 
 			// Setup loopback interface
@@ -99,7 +99,6 @@ func generateVPNConfig(as *project.AutonomousSystem, ASconfigs []*FRRConfig) []*
 						parentCfg.IGP,
 						parentIGP,
 					)
-					// parentCfg.nextOSPF++
 				} else {
 					c.IGP = append(c.IGP, getOSPF6Config(c.BGP.RouterID))
 				}
@@ -164,8 +163,8 @@ func generateVPNConfig(as *project.AutonomousSystem, ASconfigs []*FRRConfig) []*
 						if r.Hub && parentIf.IsDownstreamVRF() {
 							key := parentIf.IP.IP.String()
 							for _, subnet := range vpn.SpokeSubnets {
-								c.StaticRoutes[key] =
-									append(c.StaticRoutes[key], subnet.String())
+								c.StaticRoutes.V4[key] =
+									append(c.StaticRoutes.V4[key], subnet.String())
 							}
 						}
 

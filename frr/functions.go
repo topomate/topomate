@@ -3,6 +3,7 @@ package frr
 import (
 	"fmt"
 	"io"
+	"net"
 )
 
 func indent(w io.Writer, depth int) {
@@ -14,6 +15,10 @@ func indent(w io.Writer, depth int) {
 func writeWithIndent(w io.Writer, depth int, s string) {
 	indent(w, depth)
 	fmt.Fprintln(w, s)
+}
+
+func writeComment(dst io.Writer, msg string) {
+	fmt.Fprintln(dst, "! "+msg)
 }
 
 func (r RouteRedistribution) Write(w io.Writer, indent int) {
@@ -102,4 +107,20 @@ func (c OSPFIfConfig) Write(dst io.Writer) {
 
 func (pl *PrefixList) WriteMatch(dst io.Writer) {
 	fmt.Fprintln(dst, " match ip address prefix-list", pl.Name)
+}
+
+func (c *FRRConfig) firstLoopback(ipv6 bool) (res net.IP, found bool) {
+	lo, ok := c.Interfaces["lo"]
+	if !ok {
+		return
+	}
+
+	for _, ip := range lo.IPs {
+		if ipv6 && ip.IP.To4() == nil {
+			return ip.IP, true
+		}
+		return ip.IP, true
+	}
+
+	return
 }

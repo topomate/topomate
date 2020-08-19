@@ -15,21 +15,18 @@ const (
 	frrVersion         = "7.4.0"
 )
 
-type staticRoutes map[string][]string
-
 type FRRConfig struct {
 	Hostname     string
 	Interfaces   map[string]IfConfig
 	BGP          BGPConfig
 	IGP          []interface{}
 	MPLS         bool
-	StaticRoutes map[string][]string
-	nextOSPF     int
+	StaticRoutes staticRoutes
 	IXP          bool
 	RPKIBuffer   string
 	PrefixLists  []PrefixList
 	RouteMaps    []RouteMap
-	ipv6         bool
+	DefaultIPv6  bool
 }
 
 type IfConfig struct {
@@ -39,19 +36,6 @@ type IfConfig struct {
 	Speed       int
 	External    bool
 	VRF         string
-}
-
-type BGPNbr project.BGPNbr
-
-type BGPConfig struct {
-	ASN          int
-	RouterID     string
-	Neighbors    map[string]BGPNbr
-	Networks     []string
-	Networks6    []string
-	Redistribute RouteRedistribution
-	VRF          map[string]VRFConfig
-	Disabled     bool
 }
 
 type VRFConfig struct {

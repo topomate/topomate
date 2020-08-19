@@ -316,17 +316,22 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 		routeReflector := a.getRouter(r.Router)
 		for _, c := range r.Clients {
 			client := a.getRouter(c)
-			routeReflector.Neighbors[client.LoID()] = &BGPNbr{
+			id, mask := client.LoInfo()
+			routeReflector.Neighbors[id] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
 				RRClient:     true,
 				NextHopSelf:  true,
 				AF:           af,
+				Mask:         mask,
 			}
-			client.Neighbors[routeReflector.LoID()] = &BGPNbr{
+
+			id, mask = client.LoInfo()
+			client.Neighbors[id] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
 				AF:           af,
+				Mask:         mask,
 			}
 		}
 	}
@@ -342,11 +347,13 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 					continue
 				}
 				n := a.getRouter(clique[j])
-				router.Neighbors[n.LoID()] = &BGPNbr{
+				id, mask := n.LoInfo()
+				router.Neighbors[id] = &BGPNbr{
 					RemoteAS:     a.ASN,
 					UpdateSource: "lo",
 					NextHopSelf:  true,
 					AF:           af,
+					Mask:         mask,
 				}
 			}
 		}

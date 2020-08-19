@@ -115,6 +115,7 @@ func (ixp *IXP) linkIXP() {
 
 		// Peer
 		lnk.Router.Links = append(lnk.Router.Links, lnk.Interface)
+		m, _ := ixp.RouteServer.Links[0].IP.Mask.Size()
 		lnk.Router.Neighbors[ixp.RouteServer.Links[0].IP.IP.String()] = &BGPNbr{
 			RemoteAS: ixp.ASN,
 			// UpdateSource: "lo",
@@ -123,15 +124,18 @@ func (ixp *IXP) linkIXP() {
 			IfName:       lnk.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			Mask:         m,
 		}
 
 		// RS
+		m, _ = lnk.Interface.IP.Mask.Size()
 		ixp.RouteServer.Neighbors[lnk.Interface.IP.IP.String()] = &BGPNbr{
 			RemoteAS: lnk.ASN,
 			// UpdateSource: "lo",
 			IfName:   ixp.Links[0].Interface.IfName,
 			AF:       af,
 			RSClient: true,
+			Mask:     m,
 		}
 	}
 }

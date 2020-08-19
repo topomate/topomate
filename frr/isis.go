@@ -3,6 +3,7 @@ package frr
 import (
 	"fmt"
 	"io"
+	"net"
 )
 
 type ISISConfig struct {
@@ -109,4 +110,31 @@ func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
 			}
 		}
 	}
+}
+
+func getISISConfig(ip net.IP, area, t int, distrib RouteRedistribution) ISISConfig {
+	cfg := ISISConfig{
+		ProcessName:  isisDefaultProcess,
+		Type:         t,
+		Redistribute: distrib,
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return cfg
+	}
+	parts := [4]string{
+		fmt.Sprintf("%03d", ip[0]),
+		fmt.Sprintf("%03d", ip[1]),
+		fmt.Sprintf("%03d", ip[2]),
+		fmt.Sprintf("%03d", ip[3]),
+	}
+	iso := fmt.Sprintf(
+		"49.%04d.%s%c.%s%s.%c%s.00",
+		area,
+		parts[0], parts[1][0],
+		parts[1][1:3], parts[2][0:2],
+		parts[2][2], parts[3],
+	)
+	cfg.ISO = iso
+	return cfg
 }

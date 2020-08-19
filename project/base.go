@@ -666,15 +666,15 @@ func (p *Project) linkExternal() {
 	for _, lnk := range p.Ext {
 
 		// Get IP without mask as identifier for BGP config
-		fromID := lnk.From.Interface.IP.IP.String()
-		toID := lnk.To.Interface.IP.IP.String()
+		fromID := lnk.From.Interface.IP
+		toID := lnk.To.Interface.IP
 
 		// If a loopback is preset, prefer it
 		if len(lnk.From.Router.Loopback) > 0 {
-			fromID = lnk.From.Router.Loopback[0].IP.String()
+			fromID = lnk.From.Router.Loopback[0]
 		}
 		if len(lnk.To.Router.Loopback) > 0 {
-			toID = lnk.To.Router.Loopback[0].IP.String()
+			toID = lnk.To.Router.Loopback[0]
 		}
 
 		af := AddressFamily{}
@@ -696,9 +696,11 @@ func (p *Project) linkExternal() {
 		lnk.From.Router.Links =
 			append(lnk.From.Router.Links, lnk.From.Interface)
 
+		m, _ := toID.Mask.Size()
+
 		rmIn, rmOut := getRouteMaps(lnk.To.Relation, nil, nil)
 		// Add an entry in the neighbors table
-		lnk.From.Router.Neighbors[toID] = &BGPNbr{
+		lnk.From.Router.Neighbors[toID.IP.String()] = &BGPNbr{
 			RemoteAS:     lnk.To.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -707,6 +709,7 @@ func (p *Project) linkExternal() {
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
 			AF:           af,
+			Mask:         m,
 		}
 
 		// Do the same thing for the second part of the link
@@ -714,8 +717,10 @@ func (p *Project) linkExternal() {
 		lnk.To.Router.Links =
 			append(lnk.To.Router.Links, lnk.To.Interface)
 
+		m, _ = fromID.Mask.Size()
+
 		rmIn, rmOut = getRouteMaps(lnk.From.Relation, nil, nil)
-		lnk.To.Router.Neighbors[fromID] = &BGPNbr{
+		lnk.To.Router.Neighbors[fromID.IP.String()] = &BGPNbr{
 			RemoteAS:     lnk.From.ASN,
 			UpdateSource: "lo",
 			ConnCheck:    false,
@@ -724,6 +729,7 @@ func (p *Project) linkExternal() {
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
 			AF:           af,
+			Mask:         m,
 		}
 	}
 }

@@ -19,7 +19,7 @@ global_settings:
 autonomous_systems:
   - asn: 1
     routers: 2
-    loopback_start: '172.16.10.1/32'
+    loopback_start: '2001:db8:1::1/128'
     igp: OSPF
     bgp:
       redistribute_igp: true
@@ -28,7 +28,7 @@ autonomous_systems:
       kind: 'full-mesh'
   - asn: 2
     routers: 2
-    loopback_start: '172.16.20.1/32'
+    loopback_start: '2001:db8:2::1/128'
     igp: OSPF
     bgp:
       redistribute_igp: true
@@ -37,7 +37,7 @@ autonomous_systems:
       kind: 'full-mesh'
   - asn: 3
     routers: 2
-    loopback_start: '172.16.30.1/32'
+    loopback_start: '2001:db8:3::1/128'
     igp: OSPF
     bgp:
       redistribute_igp: true
@@ -46,7 +46,7 @@ autonomous_systems:
       kind: 'full-mesh'
   - asn: 4
     routers: 2
-    loopback_start: '172.16.40.1/32'
+    loopback_start: '2001:db8:4::1/128'
     igp: OSPF
     bgp:
       redistribute_igp: true
