@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apparentlymart/go-cidr/cidr"
-
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 )
@@ -29,12 +27,14 @@ const (
 type VPNCustomer struct {
 	Router *Router
 	Parent *Router
+	Hub    bool
 }
 
 type VPN struct {
-	VRF       string
-	Customers []VPNCustomer
-	Neighbors map[string]bool
+	VRF          string
+	Customers    []VPNCustomer
+	Neighbors    map[string]bool
+	SpokeSubnets []net.IPNet
 }
 type ospfAttributes struct {
 	Area int
@@ -43,21 +43,30 @@ type ospfAttributes struct {
 
 // AutonomousSystem represents an AS in a Project
 type AutonomousSystem struct {
-	ASN     int
-	IGP     string
-	MPLS    bool
-	Network Net
-	LoStart net.IPNet
-	Routers []*Router
-	Links   []Link
-	VPN     []VPN
-	BGP     struct {
+	ASN       int
+	IGP       string
+	MPLS      bool
+	Network   Net
+	LoStart   net.IPNet
+	Routers   []*Router
+	Hosts     []*Host
+	Links     []Link
+	HostLinks []HostLink
+	VPN       []VPN
+	BGP       struct {
 		Disabled        bool
 		RedistributeIGP bool
 	}
 	OSPF struct {
 		Stubs []int
 	}
+	RPKI struct {
+		Servers []string
+	}
+}
+
+func (vpn *VPN) IsHubAndSpoke() bool {
+	return vpn.SpokeSubnets != nil || len(vpn.SpokeSubnets) > 0
 }
 
 func (a *AutonomousSystem) IsOSPFStub(area int) bool {
@@ -109,7 +118,7 @@ func (a AutonomousSystem) getRouter(n interface{}) *Router {
 	return a.Routers[idx-1]
 }
 
-// TotalContainres returns the total number of containers needed for the AS
+// TotalContainres returns the total number of router containers needed for the AS
 // (= P + PE + CE)
 func (a *AutonomousSystem) TotalContainers() int {
 	res := len(a.Routers)
@@ -141,15 +150,16 @@ func (a *AutonomousSystem) GetMatchingLink(first, second *NetInterface) *NetInte
 
 // SetupLinks generates the L2 configuration based on provided config
 func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
+	noCost := a.IGPType() == IGPISIS
 	switch kind := strings.ToLower(cfg.Kind); kind {
 	case "manual":
-		a.Links = a.SetupManual(cfg)
+		a.Links = a.SetupManual(cfg, noCost)
 		break
 	case "ring":
-		a.Links = a.SetupRing(cfg)
+		a.Links = a.SetupRing(cfg, noCost)
 		break
 	case "full-mesh":
-		a.Links = a.SetupFullMesh(cfg)
+		a.Links = a.SetupFullMesh(cfg, noCost)
 		break
 	default:
 		break
@@ -157,43 +167,22 @@ func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
 }
 
 // ReserveSubnets generates IPv4 addressing for internal links in an AS
-func (a *AutonomousSystem) ReserveSubnets(prefixLen int) {
-	if prefixLen == 0 { // do not set subnets
+func (a *AutonomousSystem) ReserveSubnets() {
+	if !a.Network.AutoAddress { // do not set subnets
 		return
 	}
-	m, ok := a.Network.CheckPrefix(prefixLen)
-	if !ok {
-		utils.Fatalln("Prefix length invalid:", prefixLen)
-	}
-
-	n, _ := cidr.Subnet(a.Network.IPNet, prefixLen-m, 0)
-	addrCnt := cidr.AddressCount(n) - 2 // number of hosts available
-	assigned := uint64(0)
-	// ip := n.IP
-
 	for _, v := range a.Links {
-		// ip = cidr.Inc(ip)
-		n.IP = cidr.Inc(n.IP)
-		v.First.Interface.IP = *n
-		// ip = cidr.Inc(ip)
-		n.IP = cidr.Inc(n.IP)
-		v.Second.Interface.IP = *n
-		assigned += 2
-
-		// check if we need to get next subnet
-		if assigned+2 > addrCnt {
-			n, _ = cidr.NextSubnet(n, prefixLen)
-			assigned = 0
-			// ip = n.IP
-		}
-	}
-	a.Network.NextAvailable = &net.IPNet{
-		IP:   cidr.Inc(n.IP),
-		Mask: n.Mask,
+		a, b := a.Network.NextLinkIPs()
+		v.First.Interface.IP = a
+		v.Second.Interface.IP = b
 	}
 }
 
 func (a *AutonomousSystem) linkRouters(ibgp bool) {
+	af := AddressFamily{IPv4: true}
+	if !a.Network.Is4() {
+		af = AddressFamily{IPv6: true}
+	}
 	for _, lnk := range a.Links {
 		first := lnk.First
 		second := lnk.Second
@@ -211,15 +200,6 @@ func (a *AutonomousSystem) linkRouters(ibgp bool) {
 		}
 
 		// Add IGP configuration elements
-
-		// switch strings.ToUpper(a.IGP) {
-		// case "ISIS", "IS-IS":
-		// 	first.Interface.IGP.ISIS.Circuit = second.Router.IGP.ISIS.Level
-		// 	second.Interface.IGP.ISIS.Circuit = first.Router.IGP.ISIS.Level
-		// 	break
-		// default:
-		// 	break
-		// }
 
 		if a.IGPType() == IGPISIS {
 			sameArea := second.Router.IGP.ISIS.Area == first.Router.IGP.ISIS.Area
@@ -259,14 +239,14 @@ func (a *AutonomousSystem) linkRouters(ibgp bool) {
 				UpdateSource: "lo",
 				ConnCheck:    false,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 			second.Router.Neighbors[firstID] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
 				ConnCheck:    false,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
 			}
 		}
 	}
@@ -328,37 +308,31 @@ func (a *AutonomousSystem) linkVPN() {
 }
 
 func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
-	// ibgpConfig := {}
-	// var path string
-	// if filepath.IsAbs(cfg.File) {
-	// 	path = cfg.File
-	// } else {
-	// 	path = config.ConfigDir + "/" + cfg.File
-	// }
-	// data, err := ioutil.ReadFile(path)
-	// if err != nil {
-	// 	utils.Fatalln(err)
-	// }
-	// if err := yaml.Unmarshal(data, &ibgpConfig); err != nil {
-	// 	utils.Fatalln(err)
-	// }
-
+	af := AddressFamily{IPv4: true}
+	if !a.Network.Is4() {
+		af = AddressFamily{IPv6: true}
+	}
 	// Setup route reflectors and clients
 	for _, r := range ibgpConfig.RR {
 		routeReflector := a.getRouter(r.Router)
 		for _, c := range r.Clients {
 			client := a.getRouter(c)
-			routeReflector.Neighbors[client.LoID()] = &BGPNbr{
+			id, mask := client.LoInfo()
+			routeReflector.Neighbors[id] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
 				RRClient:     true,
 				NextHopSelf:  true,
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
+				Mask:         mask,
 			}
-			client.Neighbors[routeReflector.LoID()] = &BGPNbr{
+
+			id, mask = client.LoInfo()
+			client.Neighbors[id] = &BGPNbr{
 				RemoteAS:     a.ASN,
 				UpdateSource: "lo",
-				AF:           AddressFamily{IPv4: true},
+				AF:           af,
+				Mask:         mask,
 			}
 		}
 	}
@@ -374,23 +348,17 @@ func (a *AutonomousSystem) setupIBGP(ibgpConfig config.IBGPConfig) {
 					continue
 				}
 				n := a.getRouter(clique[j])
-				router.Neighbors[n.LoID()] = &BGPNbr{
+				id, mask := n.LoInfo()
+				router.Neighbors[id] = &BGPNbr{
 					RemoteAS:     a.ASN,
 					UpdateSource: "lo",
 					NextHopSelf:  true,
-					AF:           AddressFamily{IPv4: true},
+					AF:           af,
+					Mask:         mask,
 				}
 			}
 		}
 	}
-
-	// &BGPNbr{
-	// 	RemoteAS:     a.ASN,
-	// 	UpdateSource: "lo",
-	// 	ConnCheck:    false,
-	// 	NextHopSelf:  true,
-	// 	AF:           AddressFamily{IPv4: true},
-	// }
 
 }
 

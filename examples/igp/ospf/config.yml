@@ -24,10 +24,7 @@ autonomous_systems:
           area: 6
           routers: [5]
       stubs: [1, 4]
-
-        
     links:
       kind: 'manual'
-      subnet_length: 30
       file: internal-links
     

@@ -9,4 +9,5 @@ var DefaultBGPSettings GlobalBGPConfig
 const (
 	DockerRouterImage = "topomate/router"
 	DockerRSImage     = "topomate/route-server"
+	DockerRTRImage    = "topomate/rtr"
 )

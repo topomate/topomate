@@ -24,6 +24,14 @@ type PortSettings struct {
 	Speed  int
 	OFPort int
 	VRF    string
+	IP     string
+	Routes []IPRoute
+}
+
+type IPRoute struct {
+	IP     string
+	Via    string
+	IfName string
 }
 
 type OVSDockerClient struct {
@@ -49,6 +57,8 @@ func DefaultParams() PortSettings {
 		Speed: 10000,
 	}
 }
+
+var nextTableID = 100
 
 func (c *OVSDockerClient) pidToStr() string {
 	return strconv.Itoa(c.PID)
@@ -244,11 +254,18 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
-	// Activate container side and enable MPLS
+	// Activate container side
 	if err := c.ExecNS("ip", "link", "set", ifName, "up"); err != nil {
 		return err
 	}
 
+	// Enable IPV6
+
+	if err := c.ExecNS("sysctl", "-w", "net.ipv6.conf.all.forwarding=1"); err != nil {
+		return err
+	}
+
+	// Enable MPLS
 	if err := c.ExecNS("sysctl", "-w", "net.mpls.conf."+ifName+".input=1"); err != nil {
 		return err
 	}
@@ -257,6 +274,7 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 		return err
 	}
 
+	// Enable BGP VPN support
 	if err := c.ExecNS("sysctl", "-w", "net.ipv4.tcp_l3mdev_accept=1"); err != nil {
 		return err
 	}
@@ -266,11 +284,30 @@ func (c *OVSDockerClient) AddPort(brName, ifName string, settings PortSettings, 
 
 	// Add a VRF in needed
 	if settings.VRF != "" {
-		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", "100")
+		c.ExecNS("ip", "link", "add", settings.VRF, "type", "vrf", "table", strconv.Itoa(nextTableID))
 		c.ExecNS("ip", "link", "set", settings.VRF, "up")
 
 		if err := c.ExecNS("ip", "link", "set", ifName, "vrf", settings.VRF); err != nil {
 			return err
+		}
+		nextTableID++
+	}
+
+	// Add IP if specified
+	if settings.IP != "" {
+		if err := c.ExecNS("ip", "a", "add", "dev", ifName, settings.IP); err != nil {
+			return err
+		}
+	}
+
+	if len(settings.Routes) > 0 {
+		for _, route := range settings.Routes {
+			if err := c.ExecNS(
+				"ip", "route", "add", route.IP,
+				"via", route.Via,
+				"dev", route.IfName); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -306,6 +343,14 @@ func (c *OVSDockerClient) ExecNS(args ...string) error {
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("ExecNS: %s\n%s%s", cmd.String(), string(stderr.Bytes()), err)
+	}
+	return nil
+}
+
+// SysctlSet executes a syswtl write inside the container network namespace
+func (c *OVSDockerClient) SysctlSet(key, val string) error {
+	if err := c.ExecNS("sysctl", "-w", key+"="+val); err != nil {
+		return err
 	}
 	return nil
 }
@@ -358,6 +403,9 @@ func AddToBridgeBulk(elements map[string][]OVSInterface) error {
 	size := 0
 	for _, v := range elements {
 		size += len(v)
+	}
+	if size == 0 {
+		return nil
 	}
 
 	cmdArgs := make([]string, 1, 16*size)

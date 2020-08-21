@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -141,4 +142,28 @@ func PullImages() {
 	if _, err := ioutil.ReadAll(out); err != nil {
 		panic(err)
 	}
+}
+
+func StartFrr(cName string) {
+	cmd := exec.Command(
+		"docker",
+		"exec",
+		cName,
+		"/usr/lib/frr/frrinit.sh",
+		"start",
+	)
+	out, err := cmd.CombinedOutput()
+	if config.VFlag {
+		fmt.Println(cmd)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %s %v\n", cName, string(out), err)
+	}
+}
+
+func ResolveFilePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return config.ConfigDir + "/" + path
 }

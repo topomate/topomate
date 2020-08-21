@@ -8,7 +8,7 @@ autonomous_systems:
     prefix: "192.168.1.1/24"
     igp: "isis"
     bgp:
-      disabled: false
+      disabled: true
     isis:
       level-1: [1, 4]
       level-2: [5]
@@ -19,5 +19,4 @@ autonomous_systems:
         3: [5]
     links:
       kind: 'manual'
-      subnet_length: 30
       file: internal-links

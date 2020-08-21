@@ -15,17 +15,18 @@ const (
 	frrVersion         = "7.4.0"
 )
 
-type staticRoutes map[string][]string
-
 type FRRConfig struct {
 	Hostname     string
 	Interfaces   map[string]IfConfig
 	BGP          BGPConfig
 	IGP          []interface{}
 	MPLS         bool
-	StaticRoutes map[string][]string
-	nextOSPF     int
+	StaticRoutes staticRoutes
 	IXP          bool
+	RPKIBuffer   string
+	PrefixLists  []PrefixList
+	RouteMaps    []RouteMap
+	DefaultIPv6  bool
 }
 
 type IfConfig struct {
@@ -37,19 +38,6 @@ type IfConfig struct {
 	VRF         string
 }
 
-type BGPNbr project.BGPNbr
-
-type BGPConfig struct {
-	ASN          int
-	RouterID     string
-	Neighbors    map[string]BGPNbr
-	Networks     []string
-	Networks6    []string
-	Redistribute RouteRedistribution
-	VRF          map[string]VRFConfig
-	Disabled     bool
-}
-
 type VRFConfig struct {
 	RD           int
 	RT           RouteTarget
@@ -59,14 +47,6 @@ type VRFConfig struct {
 type RouteTarget struct {
 	In  int
 	Out int
-}
-
-type ISISConfig struct {
-	ProcessName  string
-	ISO          string
-	Type         int
-	Redistribute RouteRedistribution
-	VRF          string
 }
 
 type OSPFConfig struct {
@@ -84,28 +64,38 @@ type OSPF6Config struct {
 }
 
 type RouteRedistribution struct {
-	Static    bool
-	OSPF      bool
-	Connected bool
-	ISIS      bool
-	BGP       bool
+	Static       bool
+	OSPF         bool
+	Connected    bool
+	ConnectedOwn bool
+	ISIS         bool
+	BGP          bool
 }
 
 type IGPIfConfig interface {
 	Write(dst io.Writer)
 }
 
-type ISISIfConfig struct {
-	V6          bool
-	ProcessName string
-	CircuitType int
-	Cost        int
-	Passive     bool
-}
-
 type OSPFIfConfig struct {
+	V4        bool
 	V6        bool
 	ProcessID int
 	Area      int
 	Cost      int
+}
+
+type PrefixList struct {
+	Name   string
+	Prefix string
+	Deny   bool
+}
+
+type RouteMapMatch interface {
+	WriteMatch(dst io.Writer)
+}
+
+type RouteMap struct {
+	Name  string
+	Match RouteMapMatch
+	Deny  bool
 }

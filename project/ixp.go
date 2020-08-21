@@ -109,27 +109,36 @@ func (ixp *IXP) linkIXP() {
 		if i == 0 {
 			continue
 		}
-		// routerID := lnk.Router.LoID()
+
+		// check which AF are in use
+		af := lnk.Router.NeighborsAF()
 
 		// Peer
 		lnk.Router.Links = append(lnk.Router.Links, lnk.Interface)
+		m, _ := ixp.RouteServer.Links[0].IP.Mask.Size()
 		lnk.Router.Neighbors[ixp.RouteServer.Links[0].IP.IP.String()] = &BGPNbr{
 			RemoteAS: ixp.ASN,
 			// UpdateSource: "lo",
 			NextHopSelf:  true,
-			AF:           AddressFamily{IPv4: true},
+			AF:           af,
 			IfName:       lnk.Interface.IfName,
 			RouteMapsIn:  rmIn,
 			RouteMapsOut: rmOut,
+			Mask:         m,
 		}
 
 		// RS
+		m, _ = lnk.Interface.IP.Mask.Size()
 		ixp.RouteServer.Neighbors[lnk.Interface.IP.IP.String()] = &BGPNbr{
 			RemoteAS: lnk.ASN,
 			// UpdateSource: "lo",
 			IfName:   ixp.Links[0].Interface.IfName,
-			AF:       AddressFamily{IPv4: true},
+			AF:       af,
 			RSClient: true,
+			Mask:     m,
+			// Default route-map needed for BGP to process routes
+			RouteMapsIn:  []string{"ALLOW_ALL"},
+			RouteMapsOut: []string{"ALLOW_ALL"},
 		}
 	}
 }
@@ -157,7 +166,7 @@ func (p *Project) ApplyIXPLinks() {
 	}
 }
 
-func (p *Project) RemoteIXPLinks() {
+func (p *Project) RemoveIXPLinks() {
 	for _, ixp := range p.IXPs {
 		brName := fmt.Sprintf("ixp-%d", ixp.ASN)
 		link.DeleteBridge(brName)

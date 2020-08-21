@@ -5,12 +5,12 @@ import (
 	"net"
 	"strings"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/rahveiz/topomate/config"
 	"github.com/rahveiz/topomate/utils"
 )
 
 const (
+	NoRel    = iota
 	Provider = iota
 	Customer = iota
 	Peer     = iota
@@ -81,35 +81,52 @@ func (p *Project) parseExternal(k config.ExternalLink) {
 	default:
 		break
 	}
-	l.setupExternal(&p.AS[k.From.ASN].Network.NextAvailable)
+	l.setupExternal(&p.AS[k.From.ASN].Network)
 	p.Ext = append(p.Ext, l)
 }
 
-func (e *ExternalLink) setupExternal(p **net.IPNet) {
-	if p == nil {
+func (e *ExternalLink) setupExternal(p *Net) {
+	if !p.AutoAddress {
 		return
 	}
-	prefix := *p
-	prefixLen, _ := prefix.Mask.Size()
-	addrCnt := cidr.AddressCount(prefix) - 2 // number of hosts available
-	assigned := uint64(0)
+	a, b := p.NextLinkIPs()
+	e.From.Interface.IP = a
+	e.To.Interface.IP = b
+}
 
-	e.From.Interface.IP = net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
+func (p *Project) GetMatchingExtLink(first, second *NetInterface) *NetInterface {
+	if first != nil && second != nil {
+		return nil
 	}
-	prefix.IP = cidr.Inc(prefix.IP)
-	e.To.Interface.IP = net.IPNet{
-		IP:   prefix.IP,
-		Mask: prefix.Mask,
+	if first != nil {
+		for _, v := range p.Ext {
+			if v.From.Interface == first {
+				return v.To.Interface
+			}
+		}
+	} else {
+		for _, v := range p.Ext {
+			if v.To.Interface == second {
+				return v.From.Interface
+			}
+		}
 	}
-	assigned += 2
+	return nil
+}
 
-	// check if we need to get next subnet
-	if assigned+2 > addrCnt {
-		prefix, _ = cidr.NextSubnet(prefix, prefixLen)
+func (p *Project) FindMatchingExtLink(iface *NetInterface) *NetInterface {
+	if iface == nil {
+		return nil
 	}
 
-	(*p).IP = cidr.Inc(prefix.IP)
+	for _, lnk := range p.Ext {
+		if lnk.From.Interface == iface {
+			return lnk.To.Interface
+		}
+		if lnk.To.Interface == iface {
+			return lnk.From.Interface
+		}
+	}
 
+	return nil
 }

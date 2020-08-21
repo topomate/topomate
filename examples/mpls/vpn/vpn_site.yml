@@ -1,4 +1,4 @@
-name: 'vpnv4'
+name: 'vpn_site'
 
 autonomous_systems:
     - asn: 69
@@ -9,7 +9,6 @@ autonomous_systems:
       loopback_start: '10.100.1.1/32'
       links:
         kind: 'manual'
-        subnet_length: 30
         file: internal_links
       vpn:
         - vrf: 'X'
@@ -26,12 +25,4 @@ autonomous_systems:
             loopback: '192.168.1.3/32'
             subnet: '10.0.7.0/30'
             parent: 7
-        # - vrf: 'Y'
-        #   customers:
-        #   - hostname: 'C1-Y'
-        #     subnet: '10.0.5.0/30'
-        #     parent: 5
-        #   - hostname: 'C2-Y'
-        #     subnet: '10.0.7.4/30'
-        #     parent: 7
   

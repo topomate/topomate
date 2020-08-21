@@ -2,37 +2,40 @@ package cmd
 
 import (
 	"github.com/rahveiz/topomate/frr"
+	"github.com/rahveiz/topomate/project"
+	"github.com/rahveiz/topomate/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Generate configuration files",
+	Long: `Generate configurations files for FRRouting.
+They are located in $HOME/topomate/<name> by default. If no name is specified, it uses "generated".`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConf := getConfig(cmd, args)
-		foo := frr.GenerateConfig(newConf)
-		frr.WriteAll(foo)
+		// setConfigDir(newConf.Name)
+		generateConfigs(newConf)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().StringP("project", "p", "", "Project name")
+}
 
-	// Here you will define your flags and configuration settings.
+func setConfigDir(dirname string) {
+	if dirname != "" {
+		if dirname == "generated" {
+			utils.Fatalln("Name \"generated\" not allowed (used by default).")
+		}
+		viper.Set("ConfigDir", utils.GetHome()+"/topomate/"+dirname)
+	}
+}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// generateCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// generateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func generateConfigs(p *project.Project) {
+	foo := frr.GenerateConfig(p)
+	frr.WriteAll(foo)
 }

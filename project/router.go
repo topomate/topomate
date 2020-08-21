@@ -36,6 +36,7 @@ type BGPNbr struct {
 	AF           AddressFamily
 	RRClient     bool
 	RSClient     bool
+	Mask         int
 }
 
 type OSPFNet struct {
@@ -69,6 +70,32 @@ func (r *Router) LoID() string {
 		return ""
 	}
 	return r.Loopback[0].IP.String()
+}
+
+func (r *Router) LoInfo() (string, int) {
+	if len(r.Loopback) == 0 {
+		return "", 0
+	}
+	m, _ := r.Loopback[0].Mask.Size()
+	return r.Loopback[0].IP.String(), m
+}
+
+func (r *Router) NeighborsAF() (af AddressFamily) {
+	for _, nbr := range r.Neighbors {
+		if !af.IPv4 && nbr.AF.IPv4 {
+			af.IPv4 = true
+		}
+		if !af.IPv6 && nbr.AF.IPv6 {
+			af.IPv6 = true
+		}
+		// if !af.VPNv4 && nbr.AF.VPNv4 {
+		// 	af.VPNv4 = true
+		// }
+		// if !af.VPNv6 && nbr.AF.VPNv6 {
+		// 	af.VPNv6 = true
+		// }
+	}
+	return
 }
 
 // StartContainer starts the container for the router. If configPath is set,
@@ -195,15 +222,7 @@ func (r *Router) ReloadConfig() {
 	}
 }
 
+// StartFRR launches the init script inside the container
 func (r *Router) StartFRR() {
-	out, err := exec.Command(
-		"docker",
-		"exec",
-		r.ContainerName,
-		"/usr/lib/frr/frrinit.sh",
-		"start",
-	).CombinedOutput()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s %v\n", r.ContainerName, string(out), err)
-	}
+	utils.StartFrr(r.ContainerName)
 }

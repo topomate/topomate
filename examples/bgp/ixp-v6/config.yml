@@ -1,0 +1,56 @@
+name: "ixp-v6"
+autonomous_systems:
+  - asn: 101
+    routers: 2
+    loopback_start: '2001:db8:101::1/128'
+    prefix: '2001:babe:a101::/64'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+  - asn: 102
+    routers: 2
+    loopback_start: '2001:db8:102::1/128'
+    prefix: '2001:babe:a102::/64'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+  - asn: 103
+    routers: 2
+    loopback_start: '2001:db8:103::1/128'
+    prefix: '2001:babe:a103::/64'
+    bgp:
+      redistribute_igp: true
+    igp: 'ISIS'
+    links:
+      kind: 'full-mesh'
+  - asn: 300
+    routers: 2
+    loopback_start: '2001:db8:300::1/128'
+    prefix: '2001:babe:a300::/64'
+    bgp:
+      redistribute_igp: true
+    igp: 'OSPF'
+    links:
+      kind: 'full-mesh'
+
+ixps:
+  - asn: 100
+    prefix: '2001:cafe::/64'
+    loopback: '2001:db8:100::1/128'
+    peers:
+      - 101.1 1000
+      - 102.1
+      - 103.1
+
+external_links:
+  - from:
+      asn: 300
+      router_id: 1
+    to:
+      asn: 102
+      router_id: 2
+    rel: "p2c"

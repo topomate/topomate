@@ -3,6 +3,7 @@ package frr
 import (
 	"fmt"
 	"io"
+	"net"
 )
 
 func indent(w io.Writer, depth int) {
@@ -16,9 +17,16 @@ func writeWithIndent(w io.Writer, depth int, s string) {
 	fmt.Fprintln(w, s)
 }
 
+func writeComment(dst io.Writer, msg string) {
+	fmt.Fprintln(dst, "! "+msg)
+}
+
 func (r RouteRedistribution) Write(w io.Writer, indent int) {
 	if r.Connected {
 		writeWithIndent(w, indent, "redistribute connected")
+	}
+	if r.ConnectedOwn {
+		writeWithIndent(w, indent, "redistribute connected route-map OWN_PREFIX")
 	}
 	if r.Static {
 		writeWithIndent(w, indent, "redistribute static")
@@ -70,76 +78,63 @@ func isisTypeString(t int) string {
 	return ctype
 }
 
-func (c ISISIfConfig) Write(dst io.Writer) {
-	ipver := " ip"
-	if c.V6 {
-		ipver = " ipv6"
+func (c *IfConfig) GetIPType() (has4, has6 bool) {
+	for _, ip := range c.IPs {
+		if ip.IP.To4() != nil {
+			has4 = true
+		} else {
+			has6 = true
+		}
+		if has4 && has6 {
+			return
+		}
 	}
-	fmt.Fprintln(dst, ipver, "router isis", c.ProcessName)
-
-	if !c.Passive {
-		fmt.Fprintln(dst, " isis circuit-type", isisTypeString(c.CircuitType))
-	} else {
-		fmt.Fprintln(dst, " isis passive")
-	}
-	if c.Cost > 0 {
-		fmt.Fprintln(dst, " isis metric", c.Cost)
-	}
+	return
 }
 
 func (c OSPFIfConfig) Write(dst io.Writer) {
-	if c.ProcessID > 0 {
-		fmt.Fprintf(dst, " ip ospf %d area %d\n", c.ProcessID, c.Area)
-	} else {
-		fmt.Fprintln(dst, " ip ospf area", c.Area)
+	if c.V4 {
+		if c.ProcessID > 0 {
+			fmt.Fprintf(dst, " ip ospf %d area %d\n", c.ProcessID, c.Area)
+		} else {
+			fmt.Fprintln(dst, " ip ospf area", c.Area)
+		}
 	}
 	if c.Cost > 0 {
 		fmt.Fprintln(dst, " bandwidth", c.Cost)
 	}
 }
 
-func (c ISISConfig) writeRedistribution(w io.Writer, af string, level string) {
-	if c.Redistribute.Connected {
-		fmt.Fprintln(w, " redistribute", af, "connected", level)
-	}
-	if c.Redistribute.Static {
-		fmt.Fprintln(w, " redistribute", af, "static", level)
-	}
-	if c.Redistribute.OSPF {
-		fmt.Fprintln(w, " redistribute", af, "ospf", level)
-	}
-	if c.Redistribute.BGP {
-		fmt.Fprintln(w, " redistribute", af, "bgp", level)
-	}
+func (pl *PrefixList) WriteMatch(dst io.Writer) {
+	fmt.Fprintln(dst, " match ip address prefix-list", pl.Name)
 }
 
-func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
-	if v4 {
-		switch c.Type {
-		case 1:
-			c.writeRedistribution(dst, "ipv4", "level-1")
-			break
-		case 2:
-			c.writeRedistribution(dst, "ipv4", "level-2")
-			break
-		default:
-			c.writeRedistribution(dst, "ipv4", "level-1")
-			c.writeRedistribution(dst, "ipv4", "level-2")
-		}
+func (c *FRRConfig) firstLoopback(ipv6 bool) (res net.IP, found bool) {
+	lo, ok := c.Interfaces["lo"]
+	if !ok {
+		return
 	}
-	if v6 {
-		if v4 {
-			switch c.Type {
-			case 1:
-				c.writeRedistribution(dst, "ipv6", "level-1")
-				break
-			case 2:
-				c.writeRedistribution(dst, "ipv6", "level-2")
-				break
-			default:
-				c.writeRedistribution(dst, "ipv6", "level-1")
-				c.writeRedistribution(dst, "ipv6", "level-2")
+
+	for _, ip := range lo.IPs {
+		if ip.IP.To4() == nil {
+			if ipv6 {
+				return ip.IP, true
 			}
+		} else {
+			return ip.IP, true
 		}
 	}
+
+	return
+}
+
+func (c *FRRConfig) RouterID() net.IP {
+	if c.BGP.RouterID != "" {
+		if ip := net.ParseIP(c.BGP.RouterID); ip != nil {
+			return ip
+		}
+	}
+
+	lo, _ := c.firstLoopback(false)
+	return lo
 }
