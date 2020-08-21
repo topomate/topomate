@@ -150,15 +150,16 @@ func (a *AutonomousSystem) GetMatchingLink(first, second *NetInterface) *NetInte
 
 // SetupLinks generates the L2 configuration based on provided config
 func (a *AutonomousSystem) SetupLinks(cfg config.InternalLinks) {
+	noCost := a.IGPType() == IGPISIS
 	switch kind := strings.ToLower(cfg.Kind); kind {
 	case "manual":
-		a.Links = a.SetupManual(cfg)
+		a.Links = a.SetupManual(cfg, noCost)
 		break
 	case "ring":
-		a.Links = a.SetupRing(cfg)
+		a.Links = a.SetupRing(cfg, noCost)
 		break
 	case "full-mesh":
-		a.Links = a.SetupFullMesh(cfg)
+		a.Links = a.SetupFullMesh(cfg, noCost)
 		break
 	default:
 		break

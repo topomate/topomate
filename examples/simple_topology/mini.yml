@@ -1,8 +1,10 @@
-name: "Mini configuration"
+name: "MiniConfiguration"
 autonomous_systems:
   - asn: 42
     routers: 4
-    igp: OSPF
+    igp: ISIS
     prefix: '192.168.8.0/24'
     links:
       kind: 'full-mesh'
+      speed: 100
+      cost: 1000

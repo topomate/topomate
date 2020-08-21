@@ -68,7 +68,7 @@ func (l *NetInterface) IsDownstreamVRF() bool {
 
 // SetupManual generates an internal links configuration based on the provided
 // informations
-func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
+func (a *AutonomousSystem) SetupManual(lm config.InternalLinks, noCost bool) []Link {
 	var links []Link
 	if lm.Specs == nil {
 		if lm.Filepath == "" {
@@ -105,10 +105,10 @@ func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 	// if a preset is present
 	switch strings.ToLower(lm.Preset) {
 	case "ring":
-		links = append(links, a.SetupRing(lm)...)
+		links = append(links, a.SetupRing(lm, noCost)...)
 		break
 	case "full-mesh":
-		links = append(links, a.SetupFullMesh(lm)...)
+		links = append(links, a.SetupFullMesh(lm, noCost)...)
 		break
 	default:
 		break
@@ -117,7 +117,7 @@ func (a *AutonomousSystem) SetupManual(lm config.InternalLinks) []Link {
 }
 
 // SetupRing generates an internal links configuration using a ring topology
-func (a *AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
+func (a *AutonomousSystem) SetupRing(lm config.InternalLinks, noCost bool) []Link {
 	nbRouters := len(a.Routers)
 	if nbRouters < 3 {
 		utils.Fatalln("Cannot create ring topology with less than 3 routers.")
@@ -130,14 +130,32 @@ func (a *AutonomousSystem) SetupRing(lm config.InternalLinks) []Link {
 			First:  NewLinkItem(f),
 			Second: NewLinkItem(s),
 		}
+		if noCost {
+			if lm.Speed > 0 {
+				links[i-1].First.Interface.Speed = lm.Speed
+				links[i-1].Second.Interface.Speed = lm.Speed
+			}
+			links[i-1].First.Interface.Cost = 0
+			links[i-1].Second.Interface.Cost = 0
+		} else {
+			if lm.Speed > 0 {
+				links[i-1].First.Interface.SetSpeedAndCost(lm.Speed)
+				links[i-1].Second.Interface.SetSpeedAndCost(lm.Speed)
+			}
+		}
+		if lm.Cost > 0 {
+			links[i-1].First.Interface.Cost = lm.Cost
+			links[i-1].Second.Interface.Cost = lm.Cost
+		}
+
 		links[i-1].First.Interface.Description = fmt.Sprintf("linked to %s", s.Hostname)
 		links[i-1].Second.Interface.Description = fmt.Sprintf("linked to %s", f.Hostname)
 	}
 	return links
 }
 
-// SetupRing generates an internal links configuration using a full-mesh topology
-func (a *AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
+// SetupFullMesh generates an internal links configuration using a full-mesh topology
+func (a *AutonomousSystem) SetupFullMesh(lm config.InternalLinks, noCost bool) []Link {
 	nbRouters := len(a.Routers)
 	// if nbRouters < 2 {
 	// 	return nil
@@ -151,6 +169,23 @@ func (a *AutonomousSystem) SetupFullMesh(lm config.InternalLinks) []Link {
 			links[counter] = Link{
 				First:  NewLinkItem(f),
 				Second: NewLinkItem(s),
+			}
+			if noCost {
+				if lm.Speed > 0 {
+					links[counter].First.Interface.Speed = lm.Speed
+					links[counter].Second.Interface.Speed = lm.Speed
+				}
+				links[counter].First.Interface.Cost = 0
+				links[counter].Second.Interface.Cost = 0
+			} else {
+				if lm.Speed > 0 {
+					links[counter].First.Interface.SetSpeedAndCost(lm.Speed)
+					links[counter].Second.Interface.SetSpeedAndCost(lm.Speed)
+				}
+			}
+			if lm.Cost > 0 {
+				links[counter].First.Interface.Cost = lm.Cost
+				links[counter].Second.Interface.Cost = lm.Cost
 			}
 			links[counter].First.Interface.Description = fmt.Sprintf("linked to %s", s.Hostname)
 			links[counter].Second.Interface.Description = fmt.Sprintf("linked to %s", f.Hostname)

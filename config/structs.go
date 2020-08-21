@@ -94,11 +94,12 @@ type ExternalLink struct {
 }
 
 type InternalLinks struct {
-	Kind         string              `yaml:"kind"`
-	SubnetLength int                 `yaml:"subnet_length"`
-	Preset       string              `yaml:"preset,omitempty"`
-	Specs        []map[string]string `yaml:"specs,omitempty"`
-	Filepath     string              `yaml:"file"`
+	Kind     string              `yaml:"kind"`
+	Preset   string              `yaml:"preset,omitempty"`
+	Specs    []map[string]string `yaml:"specs,omitempty"`
+	Filepath string              `yaml:"file"`
+	Speed    int                 `yaml:"speed"`
+	Cost     int                 `yaml:"cost"`
 }
 
 type IXPConfig struct {
