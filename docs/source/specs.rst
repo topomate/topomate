@@ -38,7 +38,10 @@ autonomous_systems : array
   prefix : string
     Prefix used by the AS. It will also be used to auto-assign IP addresses to the
     different interfaces.
-
+  
+  subnet_length : int
+    Subnet length that will be used to auto-assign IP addresses for the different
+    interfaces.
 
   mpls : bool
     Enable MPLS in the AS. Defaults to **false**.
@@ -52,9 +55,20 @@ autonomous_systems : array
 
         Supported values: full-mesh, ring, manual.
 
-      subnet_length : int
-        Subnet length that will be used to auto-assign IP addresses for the different
-        interfaces.
+      speed : int
+        Bandwidth that will be used for the links when using a non-manual kind
+        of links, and for manual presets.
+
+      cost : int
+        Cost that will be used for the links when using a non-manual kind
+        of links, and for manual presets. If the **speed** key is set and
+        there are no cost, the cost defaults to the speed if using OSPF.
+
+      preset : string
+        Preset that will be applied to a manual configuration (if set).
+
+        Supported values: full-mesh, ring.
+
 
       file : string
         Path (relative to the configuration file, or absolute) a file containing
@@ -86,7 +100,7 @@ autonomous_systems : array
 Routing protocols options
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are optional keys available to customize the routing protocols futher.
+There are optional keys available to further customize the routing protocols.
 
 bgp 
   BGP settings
@@ -143,11 +157,14 @@ isis
           1: [1, 2]
           2: [3, 4]
           3: [5]
-  
-
+   
 
 ospf
   OSPF settings
+
+  .. warning::
+    This is still a work in progress. The generated configuration will not
+    work out of the box.
 
   networks : array
     Describes the diffrent networks
@@ -181,6 +198,49 @@ ospf
           area: 2
           routers: [4]
       stubs: [1, 4]
+
+
+L3VPN
+^^^^^
+
+Topomate allows you to define BGP/MPLS VPNs inside an AS. Please make sure
+that MPLS is enabled on the AS when using VPNs.
+
+vpn : array
+  VPN settings
+
+  vrf : string
+    Name of the VRF that will be used.
+
+  hub_and_spoke : bool
+    If true, the VPN will be configured using an Hub-and-Spoke topology,
+    using a secondary VRF on the hub.
+
+  customers : array
+    Customers specification
+
+    hostname : string
+      Hostname of the CE router.
+
+    remote_subnet : string
+      Subnet managed by the CE.
+
+    loopback : string
+      Loopback of the CE router. Must belong to the remote subnet.
+
+    subnet : string
+      Subnet used for the link between the PE and the CE.
+
+    downstream_subnet : string
+      Subnet used for the secondary link between the PE and the CE. Only used
+      on a hub.
+
+    parent : int
+      ID of the parent router (PE) in the AS.
+    
+    hub : bool
+      If set, consider that the current CE is a hub.
+
 
 
 
