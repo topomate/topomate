@@ -90,6 +90,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#general-settings">General settings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#autonomous-systems">Autonomous Systems</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#routing-protocols-options">Routing protocols options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#l3vpn">L3VPN</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#external-links">External links</a></li>
@@ -192,6 +193,9 @@ Following routers will use contiguous addresses.</p>
 <dt>prefix<span class="classifier">string</span></dt><dd><p>Prefix used by the AS. It will also be used to auto-assign IP addresses to the
 different interfaces.</p>
 </dd>
+<dt>subnet_length<span class="classifier">int</span></dt><dd><p>Subnet length that will be used to auto-assign IP addresses for the different
+interfaces.</p>
+</dd>
 <dt>mpls<span class="classifier">bool</span></dt><dd><p>Enable MPLS in the AS. Defaults to <strong>false</strong>.</p>
 </dd>
 <dt>links</dt><dd><p>Internal links specification.</p>
@@ -200,8 +204,15 @@ different interfaces.</p>
 <dt>kind<span class="classifier">string</span></dt><dd><p>Kind of interconnexion to use.</p>
 <p>Supported values: full-mesh, ring, manual.</p>
 </dd>
-<dt>subnet_length<span class="classifier">int</span></dt><dd><p>Subnet length that will be used to auto-assign IP addresses for the different
-interfaces.</p>
+<dt>speed<span class="classifier">int</span></dt><dd><p>Bandwidth that will be used for the links when using a non-manual kind
+of links, and for manual presets.</p>
+</dd>
+<dt>cost<span class="classifier">int</span></dt><dd><p>Cost that will be used for the links when using a non-manual kind
+of links, and for manual presets. If the <strong>speed</strong> key is set and
+there are no cost, the cost defaults to the speed if using OSPF.</p>
+</dd>
+<dt>preset<span class="classifier">string</span></dt><dd><p>Preset that will be applied to a manual configuration (if set).</p>
+<p>Supported values: full-mesh, ring.</p>
 </dd>
 <dt>file<span class="classifier">string</span></dt><dd><p>Path (relative to the configuration file, or absolute) a file containing
 the links specification.
@@ -229,7 +240,7 @@ If you want to set it to only one interface, use <cite>*</cite> on the other.</p
 </dl>
 <div class="section" id="routing-protocols-options">
 <h3>Routing protocols options<a class="headerlink" href="#routing-protocols-options" title="Permalink to this headline">¶</a></h3>
-<p>There are optional keys available to customize the routing protocols futher.</p>
+<p>There are optional keys available to further customize the routing protocols.</p>
 <dl>
 <dt>bgp</dt><dd><p>BGP settings</p>
 <dl>
@@ -283,6 +294,11 @@ be added to the BGP process</p>
 </dl>
 </dd>
 <dt>ospf</dt><dd><p>OSPF settings</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is still a work in progress. The generated configuration will not
+work out of the box.</p>
+</div>
 <dl>
 <dt>networks<span class="classifier">array</span></dt><dd><p>Describes the diffrent networks</p>
 <dl class="simple">
@@ -312,6 +328,41 @@ be added to the BGP process</p>
   <span class="nt">stubs</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span> <span class="nv">4</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
+</dd>
+</dl>
+</div>
+<div class="section" id="l3vpn">
+<h3>L3VPN<a class="headerlink" href="#l3vpn" title="Permalink to this headline">¶</a></h3>
+<p>Topomate allows you to define BGP/MPLS VPNs inside an AS. Please make sure
+that MPLS is enabled on the AS when using VPNs.</p>
+<dl>
+<dt>vpn<span class="classifier">array</span></dt><dd><p>VPN settings</p>
+<dl>
+<dt>vrf<span class="classifier">string</span></dt><dd><p>Name of the VRF that will be used.</p>
+</dd>
+<dt>hub_and_spoke<span class="classifier">bool</span></dt><dd><p>If true, the VPN will be configured using an Hub-and-Spoke topology,
+using a secondary VRF on the hub.</p>
+</dd>
+<dt>customers<span class="classifier">array</span></dt><dd><p>Customers specification</p>
+<dl class="simple">
+<dt>hostname<span class="classifier">string</span></dt><dd><p>Hostname of the CE router.</p>
+</dd>
+<dt>remote_subnet<span class="classifier">string</span></dt><dd><p>Subnet managed by the CE.</p>
+</dd>
+<dt>loopback<span class="classifier">string</span></dt><dd><p>Loopback of the CE router. Must belong to the remote subnet.</p>
+</dd>
+<dt>subnet<span class="classifier">string</span></dt><dd><p>Subnet used for the link between the PE and the CE.</p>
+</dd>
+<dt>downstream_subnet<span class="classifier">string</span></dt><dd><p>Subnet used for the secondary link between the PE and the CE. Only used
+on a hub.</p>
+</dd>
+<dt>parent<span class="classifier">int</span></dt><dd><p>ID of the parent router (PE) in the AS.</p>
+</dd>
+<dt>hub<span class="classifier">bool</span></dt><dd><p>If set, consider that the current CE is a hub.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd>
 </dl>
 </div>
