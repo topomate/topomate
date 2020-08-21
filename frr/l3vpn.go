@@ -105,10 +105,10 @@ func generateVPNConfig(as *project.AutonomousSystem, ASconfigs []*FRRConfig) []*
 				break
 			case "IS-IS", "ISIS":
 				c.IGP = append(c.IGP,
-					getISISConfig(r.Router.Loopback[0].IP, 1, 2, RouteRedistribution{
+					c.getISISConfig(1, 2, RouteRedistribution{
 						// Connected: true,
 					}))
-				parentIGP := getISISConfig(parentCfg.Interfaces["lo"].IPs[0].IP, 1, 2,
+				parentIGP := parentCfg.getISISConfig(1, 2,
 					RouteRedistribution{
 						BGP: true,
 					})

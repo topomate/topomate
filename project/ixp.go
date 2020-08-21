@@ -136,6 +136,9 @@ func (ixp *IXP) linkIXP() {
 			AF:       af,
 			RSClient: true,
 			Mask:     m,
+			// Default route-map needed for BGP to process routes
+			RouteMapsIn:  []string{"ALLOW_ALL"},
+			RouteMapsOut: []string{"ALLOW_ALL"},
 		}
 	}
 }

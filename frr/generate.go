@@ -111,7 +111,7 @@ func GenerateConfig(p *project.Project) [][]*FRRConfig {
 				if r.IGP.ISIS.Level != 0 {
 					lvl = r.IGP.ISIS.Level
 				}
-				c.IGP = append(c.IGP, getISISConfig(r.Loopback[0].IP,
+				c.IGP = append(c.IGP, c.getISISConfig(
 					r.IGP.ISIS.Area, lvl, RouteRedistribution{}))
 				break
 			default:

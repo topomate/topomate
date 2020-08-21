@@ -116,11 +116,25 @@ func (c *FRRConfig) firstLoopback(ipv6 bool) (res net.IP, found bool) {
 	}
 
 	for _, ip := range lo.IPs {
-		if ipv6 && ip.IP.To4() == nil {
+		if ip.IP.To4() == nil {
+			if ipv6 {
+				return ip.IP, true
+			}
+		} else {
 			return ip.IP, true
 		}
-		return ip.IP, true
 	}
 
 	return
+}
+
+func (c *FRRConfig) RouterID() net.IP {
+	if c.BGP.RouterID != "" {
+		if ip := net.ParseIP(c.BGP.RouterID); ip != nil {
+			return ip
+		}
+	}
+
+	lo, _ := c.firstLoopback(false)
+	return lo
 }

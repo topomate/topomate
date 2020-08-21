@@ -53,6 +53,8 @@ route-map PROVIDER_IN permit 10
  set community additive %[1]s
  set local-preference %[2]s
 !
+route-map ALLOW_ALL permit 100
+!
 `, provComm, provLP, peerComm, peerLP, custComm, custLP)
 
 	sep(dst)

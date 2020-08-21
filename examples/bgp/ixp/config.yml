@@ -80,4 +80,4 @@ external_links:
     to:
       asn: 102
       router_id: 2
-  
+    rel: "p2c"

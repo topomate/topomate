@@ -751,6 +751,8 @@ func getRouteMaps(relation int, inMaps []string, outMaps []string) ([]string, []
 		out = append(out, "CUSTOMER_OUT")
 		break
 	default:
+		in = append(in, "ALLOW_ALL")
+		out = append(out, "ALLOW_ALL")
 		break
 	}
 

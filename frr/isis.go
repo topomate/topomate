@@ -3,7 +3,8 @@ package frr
 import (
 	"fmt"
 	"io"
-	"net"
+
+	"github.com/rahveiz/topomate/utils"
 )
 
 type ISISConfig struct {
@@ -112,15 +113,15 @@ func (c ISISConfig) writeRedistribute(dst io.Writer, v4 bool, v6 bool) {
 	}
 }
 
-func getISISConfig(ip net.IP, area, t int, distrib RouteRedistribution) ISISConfig {
+func (c *FRRConfig) getISISConfig(area, t int, distrib RouteRedistribution) ISISConfig {
 	cfg := ISISConfig{
 		ProcessName:  isisDefaultProcess,
 		Type:         t,
 		Redistribute: distrib,
 	}
-	ip = ip.To4()
+	ip := c.RouterID().To4()
 	if ip == nil {
-		return cfg
+		utils.Fatalf("Could not generate IS-IS ISO address for %s (AS%d)\n", c.Hostname, c.BGP.ASN)
 	}
 	parts := [4]string{
 		fmt.Sprintf("%03d", ip[0]),
