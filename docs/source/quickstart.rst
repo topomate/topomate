@@ -18,7 +18,7 @@ We'll define a simple configuration with 2 AS (AS1 and AS2).
 First, we'll describe the specification of AS1. Let's say that AS1 is made of
 4 routers using a full-mesh topology, and that it administrates the
 `10.1.1.1/24` prefix. `/30` networks will be used to interconnect the different
-routers. We also specify a name that will be the directory where the
+routers by default. We also specify a name that will be the directory where the
 configuration files will be put (defaults to "generated" if the key is not
 present).
 
@@ -33,7 +33,6 @@ present).
       prefix: '10.1.1.0/24'
       links:
         kind: 'full-mesh'
-        subnet_length: 30
 
 Now, we will specify the loopback addresses of the routers. The configuration
 uses the `loopback_start` element, that will be the loopback address of the
@@ -57,7 +56,6 @@ configuration to redistribute prefixes learnt by OSPF so we set the
       redistribute_igp: true
       links:
         kind: 'full-mesh'
-        subnet_length: 30
       
 
 AS1 is now specified. We can do the same process for AS2.
@@ -74,7 +72,6 @@ AS1 is now specified. We can do the same process for AS2.
       redistribute_igp: true
       links:
         kind: 'full-mesh'
-        subnet_length: 30
     - asn: 2
       routers: 2
       loopback_start: '172.16.20.1/32'
@@ -83,7 +80,6 @@ AS1 is now specified. We can do the same process for AS2.
       prefix: '10.1.2.0/24'
       links:
         kind: 'full-mesh'
-        subnet_length: 30
 
 
 We will then describe the external links (between AS1 and AS2). Here, we will
@@ -148,7 +144,7 @@ If you only want the FRR configuration files, you can use the `generate` command
    topomate generate /path/to/config/file.yaml
 
 
-Restart a router
+Restarting a router
 ###################
 
 A router can be restarted using the `restart` command. It will synchronise the
