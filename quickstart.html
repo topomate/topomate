@@ -92,7 +92,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#starting-the-network-topology">Starting the network topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stopping-the-topology">Stopping the topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#only-generate-configuration-files">Only generate configuration files</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#restart-a-router">Restart a router</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#restarting-a-router">Restarting a router</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#interacting-with-frrouting">Interacting with FRRouting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-other-tools">Using other tools</a></li>
 </ul>
@@ -180,7 +180,7 @@ own home directory automatically.</p>
 <p>First, we’ll describe the specification of AS1. Let’s say that AS1 is made of
 4 routers using a full-mesh topology, and that it administrates the
 <cite>10.1.1.1/24</cite> prefix. <cite>/30</cite> networks will be used to interconnect the different
-routers. We also specify a name that will be the directory where the
+routers by default. We also specify a name that will be the directory where the
 configuration files will be put (defaults to “generated” if the key is not
 present).</p>
 <div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
@@ -190,8 +190,7 @@ present).</p>
 5
 6
 7
-8
-9</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="nt">name</span><span class="p">:</span> <span class="s">&quot;quickstart_topology&quot;</span>
+8</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="nt">name</span><span class="p">:</span> <span class="s">&quot;quickstart_topology&quot;</span>
 
  <span class="nt">autonomous_systems</span><span class="p">:</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
@@ -199,7 +198,6 @@ present).</p>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
-      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
 </pre></div>
 </td></tr></table></div>
 <p>Now, we will specify the loopback addresses of the routers. The configuration
@@ -209,16 +207,15 @@ will have the <cite>172.16.10.2/32</cite> address).</p>
 <p>We will also specify which IGP to use, here it is OSPF. We want our BGP
 configuration to redistribute prefixes learnt by OSPF so we set the
 <cite>redistribute_igp</cite> element to <cite>true</cite>.</p>
-<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
@@ -227,7 +224,6 @@ configuration to redistribute prefixes learnt by OSPF so we set the
     <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
-      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
 </pre></div>
 </td></tr></table></div>
 <p>AS1 is now specified. We can do the same process for AS2.</p>
@@ -247,9 +243,7 @@ configuration to redistribute prefixes learnt by OSPF so we set the
 14
 15
 16
-17
-18
-19</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+17</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
@@ -258,7 +252,6 @@ configuration to redistribute prefixes learnt by OSPF so we set the
     <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
-      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
     <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.20.1/32&#39;</span>
@@ -267,7 +260,6 @@ configuration to redistribute prefixes learnt by OSPF so we set the
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.2.0/24&#39;</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
-      <span class="nt">subnet_length</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">30</span>
 </pre></div>
 </td></tr></table></div>
 <p>We will then describe the external links (between AS1 and AS2). Here, we will
@@ -322,8 +314,8 @@ the current configuration files.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="restart-a-router">
-<h2>Restart a router<a class="headerlink" href="#restart-a-router" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="restarting-a-router">
+<h2>Restarting a router<a class="headerlink" href="#restarting-a-router" title="Permalink to this headline">¶</a></h2>
 <p>A router can be restarted using the <cite>restart</cite> command. It will synchronise the
 configuration file and links will be re-applied.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate restart &lt;container_name&gt;
