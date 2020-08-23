@@ -116,6 +116,18 @@ To start a network topology, simply run the following command:
 
    topomate start /path/to/config/file.yaml
 
+By default, the configurations will be generated in your home directory using
+the following path format: `~/topomate/<name>/conf_<ASN>_<hostname>`
+(i.e. `~/quickstart_topology/conf_1_R3`).
+
+Topomate will also generate a JSON file containing data relative to the links.
+
+If you have made modifications on the configuration files that you want to keep,
+you can use the `--no-generate` flag to start the topology without overriding
+the current configuration files.
+
+
+
 Stopping the topology
 #####################
 
@@ -135,6 +147,50 @@ If you only want the FRR configuration files, you can use the `generate` command
 
    topomate generate /path/to/config/file.yaml
 
-By default, the configurations will be generated in your home directory using
-the following path format: `~/topomate/<config_dir>/conf_<ASN>_<hostname>`
-(i.e. `~/quickstart_topology/conf_1_R3`).
+
+Restart a router
+###################
+
+A router can be restarted using the `restart` command. It will synchronise the
+configuration file and links will be re-applied.
+
+.. code-block:: bash
+
+   topomate restart <container_name>
+
+.. warning::
+  Do not restart a router using the `docker restart` command, as the
+  configuration won't be synchronized, and most importantly the links won't be
+  reapplied as Topomate does not use the native Docker networking solution.
+
+Interacting with FRRouting
+***********************
+
+Once the containers are started, you can use the common `docker` commands
+to interract with FRR.
+
+You can directly launch the `vtysh` using
+
+.. code-block:: bash
+   docker exec -it <container_name> vtysh
+
+or you can use a traditionnal shell (`ash`, `bash`)
+
+.. code-block:: bash
+   docker exec -it <container_name> ash
+
+and launch `vtysh` from this shell.
+
+
+Using other tools
+*****************
+
+From a traditionnal shell, there are some tools already installed :
+
+* `tcpdump`
+* `tcptraceroute`
+* `iperf3`
+
+.. note::
+  Use the `docker cp` command to copy files such as `.pcap` files to
+  your host (useful if you want to analyze a capture with Wireshark).

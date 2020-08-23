@@ -92,6 +92,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#starting-the-network-topology">Starting the network topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stopping-the-topology">Stopping the topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#only-generate-configuration-files">Only generate configuration files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#restart-a-router">Restart a router</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#interacting-with-frrouting">Interacting with FRRouting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-other-tools">Using other tools</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="specs.html">Specification file</a></li>
@@ -295,6 +300,13 @@ either invert the <cite>from</cite> and <cite>to</cite> specification, or you ca
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate start /path/to/config/file.yaml
 </pre></div>
 </div>
+<p>By default, the configurations will be generated in your home directory using
+the following path format: <cite>~/topomate/&lt;name&gt;/conf_&lt;ASN&gt;_&lt;hostname&gt;</cite>
+(i.e. <cite>~/quickstart_topology/conf_1_R3</cite>).</p>
+<p>Topomate will also generate a JSON file containing data relative to the links.</p>
+<p>If you have made modifications on the configuration files that you want to keep,
+you can use the <cite>–no-generate</cite> flag to start the topology without overriding
+the current configuration files.</p>
 </div>
 <div class="section" id="stopping-the-topology">
 <h2>Stopping the topology<a class="headerlink" href="#stopping-the-topology" title="Permalink to this headline">¶</a></h2>
@@ -309,9 +321,42 @@ either invert the <cite>from</cite> and <cite>to</cite> specification, or you ca
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate generate /path/to/config/file.yaml
 </pre></div>
 </div>
-<p>By default, the configurations will be generated in your home directory using
-the following path format: <cite>~/topomate/&lt;config_dir&gt;/conf_&lt;ASN&gt;_&lt;hostname&gt;</cite>
-(i.e. <cite>~/quickstart_topology/conf_1_R3</cite>).</p>
+</div>
+<div class="section" id="restart-a-router">
+<h2>Restart a router<a class="headerlink" href="#restart-a-router" title="Permalink to this headline">¶</a></h2>
+<p>A router can be restarted using the <cite>restart</cite> command. It will synchronise the
+configuration file and links will be re-applied.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>topomate restart &lt;container_name&gt;
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not restart a router using the <cite>docker restart</cite> command, as the
+configuration won’t be synchronized, and most importantly the links won’t be
+reapplied as Topomate does not use the native Docker networking solution.</p>
+</div>
+<div class="section" id="interacting-with-frrouting">
+<h3>Interacting with FRRouting<a class="headerlink" href="#interacting-with-frrouting" title="Permalink to this headline">¶</a></h3>
+<p>Once the containers are started, you can use the common <cite>docker</cite> commands
+to interract with FRR.</p>
+<p>You can directly launch the <cite>vtysh</cite> using</p>
+<p>or you can use a traditionnal shell (<cite>ash</cite>, <cite>bash</cite>)</p>
+<p>and launch <cite>vtysh</cite> from this shell.</p>
+</div>
+<div class="section" id="using-other-tools">
+<h3>Using other tools<a class="headerlink" href="#using-other-tools" title="Permalink to this headline">¶</a></h3>
+<p>From a traditionnal shell, there are some tools already installed :</p>
+<ul class="simple">
+<li><p><cite>tcpdump</cite></p></li>
+<li><p><cite>tcptraceroute</cite></p></li>
+<li><p><cite>iperf3</cite></p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Use the <cite>docker cp</cite> command to copy files such as <cite>.pcap</cite> files to
+your host (useful if you want to analyze a capture with Wireshark).</p>
+</div>
+</div>
 </div>
 </div>
 
