@@ -92,8 +92,9 @@
 <li class="toctree-l2"><a class="reference internal" href="#starting-the-network-topology">Starting the network topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stopping-the-topology">Stopping the topology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#only-generate-configuration-files">Only generate configuration files</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#restarting-a-router">Restarting a router</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#interacting-with-frrouting">Interacting with FRRouting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#restarting-a-router">Restarting a router</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interacting-with-the-router">Interacting with the router</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#accessing-frrouting">Accessing FRRouting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-other-tools">Using other tools</a></li>
 </ul>
 </li>
@@ -207,21 +208,23 @@ will have the <cite>172.16.10.2/32</cite> address).</p>
 <p>We will also specify which IGP to use, here it is OSPF. We want our BGP
 configuration to redistribute prefixes learnt by OSPF so we set the
 <cite>redistribute_igp</cite> element to <cite>true</cite>.</p>
-<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
-2
-3
-4
-5
-6
-7
-8
-9</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+<div class="highlight-yaml notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
     <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.10.1/32&#39;</span>
     <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
-    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">bgp</span><span class="p">:</span>
+      <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
 </pre></div>
@@ -243,20 +246,24 @@ configuration to redistribute prefixes learnt by OSPF so we set the
 14
 15
 16
-17</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
+17
+18
+19</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nt">autonomous_systems</span><span class="p">:</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.1.0/24&#39;</span>
     <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.10.1/32&#39;</span>
     <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
-    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">bgp</span><span class="p">:</span>
+      <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
   <span class="p p-Indicator">-</span> <span class="nt">asn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
     <span class="nt">routers</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
     <span class="nt">loopback_start</span><span class="p">:</span> <span class="s">&#39;172.16.20.1/32&#39;</span>
     <span class="nt">igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">OSPF</span>
-    <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">bgp</span><span class="p">:</span>
+      <span class="nt">redistribute_igp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
     <span class="nt">prefix</span><span class="p">:</span> <span class="s">&#39;10.1.2.0/24&#39;</span>
     <span class="nt">links</span><span class="p">:</span>
       <span class="nt">kind</span><span class="p">:</span> <span class="s">&#39;full-mesh&#39;</span>
@@ -327,8 +334,11 @@ configuration file and links will be re-applied.</p>
 configuration won’t be synchronized, and most importantly the links won’t be
 reapplied as Topomate does not use the native Docker networking solution.</p>
 </div>
-<div class="section" id="interacting-with-frrouting">
-<h3>Interacting with FRRouting<a class="headerlink" href="#interacting-with-frrouting" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="interacting-with-the-router">
+<h2>Interacting with the router<a class="headerlink" href="#interacting-with-the-router" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="accessing-frrouting">
+<h3>Accessing FRRouting<a class="headerlink" href="#accessing-frrouting" title="Permalink to this headline">¶</a></h3>
 <p>Once the containers are started, you can use the common <cite>docker</cite> commands
 to interract with FRR.</p>
 <p>You can directly launch the <cite>vtysh</cite> using</p>

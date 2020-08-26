@@ -53,7 +53,8 @@ configuration to redistribute prefixes learnt by OSPF so we set the
       prefix: '10.1.1.0/24'
       loopback_start: '172.16.10.1/32'
       igp: OSPF
-      redistribute_igp: true
+      bgp:
+        redistribute_igp: true
       links:
         kind: 'full-mesh'
       
@@ -69,14 +70,16 @@ AS1 is now specified. We can do the same process for AS2.
       prefix: '10.1.1.0/24'
       loopback_start: '172.16.10.1/32'
       igp: OSPF
-      redistribute_igp: true
+      bgp:
+        redistribute_igp: true
       links:
         kind: 'full-mesh'
     - asn: 2
       routers: 2
       loopback_start: '172.16.20.1/32'
       igp: OSPF
-      redistribute_igp: true
+      bgp:
+        redistribute_igp: true
       prefix: '10.1.2.0/24'
       links:
         kind: 'full-mesh'
@@ -159,8 +162,11 @@ configuration file and links will be re-applied.
   configuration won't be synchronized, and most importantly the links won't be
   reapplied as Topomate does not use the native Docker networking solution.
 
-Interacting with FRRouting
-***********************
+Interacting with the router
+###########################
+
+Accessing FRRouting
+*******************
 
 Once the containers are started, you can use the common `docker` commands
 to interract with FRR.
