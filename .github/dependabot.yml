@@ -6,7 +6,17 @@
 version: 2
 updates:
   - package-ecosystem: "docker" # See documentation for possible values
-    directory: "/images" # Location of package manifests
+    directory: "/images/route-server-frr" # Location of package manifests
+    schedule:
+      interval: "daily"
+      
+  - package-ecosystem: "docker" # See documentation for possible values
+    directory: "/images/rtr" # Location of package manifests
+    schedule:
+      interval: "daily"
+  
+  - package-ecosystem: "docker" # See documentation for possible values
+    directory: "/images/router" # Location of package manifests
     schedule:
       interval: "daily"
       
