@@ -8,7 +8,7 @@ require (
 	github.com/containerd/containerd v1.3.4 // indirect
 	github.com/digitalocean/go-openvswitch v0.0.0-20191122155805-8ce3b4218729
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200605165554-5ffd6778244c+incompatible
+	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
