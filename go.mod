@@ -18,10 +18,8 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/spf13/cobra v1.0.0
-	github.com/spf13/viper v1.7.0
-	github.com/stretchr/testify v1.4.0 // indirect
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
+	github.com/spf13/cobra v1.3.0
+	github.com/spf13/viper v1.10.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v1.4.0 // indirect
 )
