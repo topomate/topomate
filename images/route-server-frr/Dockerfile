@@ -1,4 +1,4 @@
-FROM frrouting/frr:v7.4.0
+FROM frrouting/frr:v8.3.0
 
 RUN apk add iperf3 &&\
     apk add tcpdump &&\
